@@ -17,7 +17,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # Load the UI Page
         self.ui = uic.loadUi('Mainwindow.ui', self)
         self.setWindowTitle("Signal Equlizer")
-        print("Loading")
         self.ui.graph1.setBackground("transparent")
         self.ui.graph2.setBackground("transparent")
         self.ui.spectogram1.setBackground("transparent")

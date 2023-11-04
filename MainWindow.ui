@@ -570,6 +570,21 @@ background-color: #1c2973;
               </item>
               <item>
                <widget class="QSlider" name="speedSlider">
+                <property name="styleSheet">
+                 <string notr="true">
+
+/* Style for the slider handle (thumb) */
+QSlider::handle {
+background: #FF4742; /* Color of the handle */
+border: 1px solid ; /* Border of the handle */
+}
+
+/* Style for the slider handle when pressed */
+QSlider::handle:pressed {
+background: #992a27; /* Color of the handle when pressed */
+border: 1px solid #3498db; /* Border of the handle when pressed */
+}</string>
+                </property>
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
