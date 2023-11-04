@@ -6,12 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>821</width>
-    <height>672</height>
+    <width>1313</width>
+    <height>796</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: #242526;</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -24,43 +27,217 @@
        <number>10</number>
       </property>
       <property name="topMargin">
-       <number>10</number>
+       <number>20</number>
       </property>
       <property name="rightMargin">
-       <number>20</number>
+       <number>40</number>
       </property>
       <item>
        <widget class="QPushButton" name="browseFile">
+        <property name="font">
+         <font>
+          <family>-apple-system</family>
+          <pointsize>16</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton{
+  appearance: button;
+  backface-visibility: hidden;
+  background-color: #405cf5;
+  border-radius: 6px;
+  border-width: 0;
+  box-shadow: rgba(50, 50, 93, .1) 0 0 0 1px inset,rgba(50, 50, 93, .1) 0 2px 5px 0,rgba(0, 0, 0, .07) 0 1px 1px 0;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  font-family: -apple-system,system-ui,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Ubuntu,sans-serif;
+  font-size: 100%;
+  height: 44px;
+  line-height: 1.15;
+ margin: 10px 10px;
+  outline: none;
+  overflow: hidden;
+  padding: 0 10px;
+  position: relative;
+  text-align: center;
+  text-transform: none;
+  transform: translateZ(0);
+  transition: all .2s,box-shadow .08s ease-in;
+  touch-action: manipulation;
+  width:155px;
+}
+QPushButton:hover{
+background-color: #283999;
+}
+QPushButton:pressed{
+background-color: #1c2973;
+}
+</string>
+        </property>
         <property name="text">
          <string>Browse File</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>icons/upload-.png</normaloff>icons/upload-.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>25</width>
+          <height>25</height>
+         </size>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="smoothingWindow">
+        <property name="font">
+         <font>
+          <family>-apple-system</family>
+          <pointsize>14</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton{
+  appearance: button;
+  backface-visibility: hidden;
+  background-color: #405cf5;
+  border-radius: 6px;
+  border-width: 0;
+  box-shadow: rgba(50, 50, 93, .1) 0 0 0 1px inset,rgba(50, 50, 93, .1) 0 2px 5px 0,rgba(0, 0, 0, .07) 0 1px 1px 0;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  font-family: -apple-system,system-ui,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Ubuntu,sans-serif;
+  font-size: 100%;
+  height: 44px;
+  line-height: 1.15;
+ margin: 5px 10px;
+  outline: none;
+  overflow: hidden;
+  padding: 0 10px;
+  position: relative;
+  text-align: center;
+  text-transform: none;
+  transform: translateZ(0);
+  transition: all .2s,box-shadow .08s ease-in;
+  touch-action: manipulation;
+  width:155px;
+}
+QPushButton:hover{
+background-color: #283999;
+}
+QPushButton:pressed{
+background-color: #1c2973;
+}
+</string>
+        </property>
         <property name="text">
-         <string>Smoothing Window</string>
+         <string>Smoothing</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>icons/signal-1-svgrepo-com.png</normaloff>icons/signal-1-svgrepo-com.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>25</width>
+          <height>25</height>
+         </size>
         </property>
        </widget>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout">
+       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
+        <property name="spacing">
+         <number>3</number>
+        </property>
         <item>
          <widget class="QLabel" name="label">
+          <property name="font">
+           <font>
+            <family>Overpass SemiBold</family>
+            <pointsize>12</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color:rgb(255, 255, 255)</string>
+          </property>
           <property name="text">
            <string>Choose The Mode</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="mode"/>
+         <widget class="QComboBox" name="modeList">
+          <property name="styleSheet">
+           <string notr="true">QComboBox {
+    font-family: &quot;Overpass&quot;;
+    font-weight: 600; /* Semibold */
+    font-size: 10pt; /* Adjust the font size as needed */
+}
+</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
       <item>
        <widget class="QCheckBox" name="spectogram">
+        <property name="font">
+         <font>
+          <family>Overpass SemiBold</family>
+          <pointsize>14</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QCheckBox {
+    spacing: 10px; /* Adjust the spacing between the checkbox and label */
+color:white;
+}
+
+QCheckBox::indicator {
+    width: 15px; /* Adjust the width of the checkbox indicator */
+    height: 15px; /* Adjust the height of the checkbox indicator */
+border-radius: 5px;
+}
+
+QCheckBox::indicator:unchecked {
+    border: 2px solid #555; /* Border color of the unchecked checkbox */
+    background-color: #fff; /* Background color of the unchecked checkbox */
+}
+
+QCheckBox::indicator:unchecked:hover {
+    border: 2px solid #777; /* Border color when the unchecked checkbox is hovered */
+}
+
+QCheckBox::indicator:checked {
+    border: 2px solid #192462; /* Border color of the checked checkbox */
+    background-color: #405cf5; /* Background color of the checked checkbox */
+}
+
+QCheckBox::indicator:checked:hover {
+    border: 2px solid #0C1231; /* Border color when the checked checkbox is hovered */
+    background-color: #2C40AB; /* Background color when the checked checkbox is hovered */
+}
+</string>
+        </property>
         <property name="text">
          <string>Spectogram</string>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="tristate">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -85,7 +262,7 @@
        <number>6</number>
       </property>
       <property name="leftMargin">
-       <number>30</number>
+       <number>10</number>
       </property>
       <property name="rightMargin">
        <number>10</number>
@@ -105,14 +282,14 @@
             <item>
              <widget class="PlotWidget" name="graph1" native="true">
               <property name="styleSheet">
-               <string notr="true">background-color: rgb(0, 0, 0);</string>
+               <string notr="true">border-radius: 6px;</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="PlotWidget" name="graph2" native="true">
               <property name="styleSheet">
-               <string notr="true">background-color: rgb(0, 0, 0);</string>
+               <string notr="true">border-radius: 6px;</string>
               </property>
              </widget>
             </item>
@@ -135,36 +312,257 @@
             </item>
             <item>
              <widget class="QPushButton" name="playPause">
+              <property name="font">
+               <font>
+                <family>-apple-system</family>
+                <pointsize>14</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+appearance: button;
+backface-visibility: hidden;
+background-color: #405cf5;
+border-radius: 6px;
+border-width: 0;
+box-shadow: rgba(50, 50, 93, .1) 0 0 0 1px inset,rgba(50, 50, 93, .1) 0 2px 5px 0,rgba(0, 0, 0, .07) 0 1px 1px 0;
+box-sizing: border-box;
+color: #fff;
+cursor: pointer;
+font-family: -apple-system,system-ui,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Ubuntu,sans-serif;
+font-size: 100%;
+height: 30px;
+line-height: 1.15;
+outline: none;
+overflow: hidden;
+padding: 3 10px;
+position: relative;
+text-align: center;
+text-transform: none;
+transform: translateZ(0);
+transition: all .2s,box-shadow .08s ease-in;
+user-select: none;
+-webkit-user-select: none;
+touch-action: manipulation;
+width: 70px; /* Reduced width to 200 pixels */
+}
+QPushButton:hover{
+background-color: #283999;
+}
+QPushButton:pressed{
+background-color: #1c2973;
+}</string>
+              </property>
               <property name="text">
                <string>Play</string>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>icons/play-square-svgrepo-com.png</normaloff>icons/play-square-svgrepo-com.png</iconset>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>25</width>
+                <height>25</height>
+               </size>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QPushButton" name="zoomIn">
+              <property name="font">
+               <font>
+                <family>-apple-system</family>
+                <pointsize>12</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+appearance: button;
+backface-visibility: hidden;
+background-color: #405cf5;
+border-radius: 6px;
+border-width: 0;
+box-shadow: rgba(50, 50, 93, .1) 0 0 0 1px inset,rgba(50, 50, 93, .1) 0 2px 5px 0,rgba(0, 0, 0, .07) 0 1px 1px 0;
+box-sizing: border-box;
+color: #fff;
+cursor: pointer;
+font-family: -apple-system,system-ui,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Ubuntu,sans-serif;
+font-size: 100%;
+height: 30px;
+line-height: 1.15;
+outline: none;
+overflow: hidden;
+padding: 3 10px;
+position: relative;
+text-align: center;
+text-transform: none;
+transform: translateZ(0);
+transition: all .2s,box-shadow .08s ease-in;
+user-select: none;
+-webkit-user-select: none;
+touch-action: manipulation;
+width: 70px; /* Reduced width to 200 pixels */
+}
+QPushButton:hover{
+background-color: #283999;
+}
+QPushButton:pressed{
+background-color: #1c2973;
+}</string>
+              </property>
               <property name="text">
-               <string>Zoom in</string>
+               <string>Zoom </string>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>icons/plus-square-svgrepo-com.png</normaloff>icons/plus-square-svgrepo-com.png</iconset>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>25</width>
+                <height>25</height>
+               </size>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QPushButton" name="zoomOut">
+              <property name="font">
+               <font>
+                <family>-apple-system</family>
+                <pointsize>12</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+appearance: button;
+backface-visibility: hidden;
+background-color: #405cf5;
+border-radius: 6px;
+border-width: 0;
+box-shadow: rgba(50, 50, 93, .1) 0 0 0 1px inset,rgba(50, 50, 93, .1) 0 2px 5px 0,rgba(0, 0, 0, .07) 0 1px 1px 0;
+box-sizing: border-box;
+color: #fff;
+cursor: pointer;
+font-family: -apple-system,system-ui,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Ubuntu,sans-serif;
+font-size: 100%;
+height: 30px;
+line-height: 1.15;
+outline: none;
+overflow: hidden;
+padding: 3 10px;
+position: relative;
+text-align: center;
+text-transform: none;
+transform: translateZ(0);
+transition: all .2s,box-shadow .08s ease-in;
+user-select: none;
+-webkit-user-select: none;
+touch-action: manipulation;
+width: 70px; /* Reduced width to 200 pixels */
+}
+QPushButton:hover{
+background-color: #283999;
+}
+QPushButton:pressed{
+background-color: #1c2973;
+}</string>
+              </property>
               <property name="text">
-               <string>Zoom out</string>
+               <string>Zoom </string>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>icons/minus-square-svgrepo-com.png</normaloff>icons/minus-square-svgrepo-com.png</iconset>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>25</width>
+                <height>25</height>
+               </size>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QPushButton" name="reset">
+              <property name="font">
+               <font>
+                <family>-apple-system</family>
+                <pointsize>14</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+appearance: button;
+backface-visibility: hidden;
+background-color: #405cf5;
+border-radius: 6px;
+border-width: 0;
+box-shadow: rgba(50, 50, 93, .1) 0 0 0 1px inset,rgba(50, 50, 93, .1) 0 2px 5px 0,rgba(0, 0, 0, .07) 0 1px 1px 0;
+box-sizing: border-box;
+color: #fff;
+cursor: pointer;
+font-family: -apple-system,system-ui,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Ubuntu,sans-serif;
+font-size: 100%;
+height: 30px;
+line-height: 1.15;
+outline: none;
+overflow: hidden;
+padding: 3 10px;
+position: relative;
+text-align: center;
+text-transform: none;
+transform: translateZ(0);
+transition: all .2s,box-shadow .08s ease-in;
+user-select: none;
+-webkit-user-select: none;
+touch-action: manipulation;
+width: 80px; /* Reduced width to 200 pixels */
+}
+QPushButton:hover{
+background-color: #283999;
+}
+QPushButton:pressed{
+background-color: #1c2973;
+}</string>
+              </property>
               <property name="text">
                <string>Reset</string>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>icons/reset-svgrepo-com.png</normaloff>icons/reset-svgrepo-com.png</iconset>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>25</width>
+                <height>25</height>
+               </size>
               </property>
              </widget>
             </item>
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <property name="spacing">
+               <number>3</number>
+              </property>
               <item>
                <widget class="QLabel" name="label_2">
+                <property name="font">
+                 <font>
+                  <family>Overpass SemiBold</family>
+                  <pointsize>12</pointsize>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color:rgb(255, 255, 255)</string>
+                </property>
                 <property name="text">
                  <string>Speed</string>
                 </property>
@@ -201,14 +599,14 @@
           <item>
            <widget class="PlotWidget" name="spectogram1" native="true">
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(0, 0, 0);</string>
+             <string notr="true">border-radius: 6px;</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="PlotWidget" name="spectogram2" native="true">
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(0, 0, 0);</string>
+             <string notr="true">border-radius: 6px;</string>
             </property>
            </widget>
           </item>
@@ -266,7 +664,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>821</width>
+     <width>1313</width>
      <height>22</height>
     </rect>
    </property>
@@ -281,6 +679,8 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="Resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

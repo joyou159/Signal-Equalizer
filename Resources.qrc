@@ -1,0 +1,12 @@
+<RCC>
+  <qresource prefix="icons">
+    <file>icons/minus-square-svgrepo-com.png</file>
+    <file>icons/pause.svg</file>
+    <file>icons/pause-square-svgrepo-com.png</file>
+    <file>icons/play.svg</file>
+    <file>icons/play-square-svgrepo-com.png</file>
+    <file>icons/reset-svgrepo-com.png</file>
+    <file>icons/signal-1-svgrepo-com.png</file>
+    <file>icons/upload-.png</file>
+  </qresource>
+</RCC>
