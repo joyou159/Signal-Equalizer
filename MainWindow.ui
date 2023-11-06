@@ -235,7 +235,7 @@ background: rgba(74, 74, 74, 0);
           </layout>
          </item>
          <item>
-          <widget class="QCheckBox" name="spectogram">
+          <widget class="QCheckBox" name="spectogramCheck">
            <property name="font">
             <font>
              <family>Overpass SemiBold</family>
@@ -734,7 +734,7 @@ border: 1px solid #3498db; /* Border of the handle when pressed */
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_2">
+              <layout class="QHBoxLayout" name="spectrogramLayout">
                <item>
                 <widget class="PlotWidget" name="spectogram1" native="true">
                  <property name="styleSheet">

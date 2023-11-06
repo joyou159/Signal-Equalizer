@@ -33,6 +33,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.browseFile.clicked.connect(self.browse)
         self.ui.modeList.currentIndexChanged.connect(self.handle_combobox_selection)
+        self.ui.spectogramCheck.stateChanged.connect(self.show_spectrogram)
 
 
     def graph_style_ui(self):
@@ -49,6 +50,24 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.modeList.addItem("Musical Instruments")
         self.ui.modeList.addItem("Animal Sounds")
         self.ui.modeList.addItem("ECG Abnormalities")
+
+
+    def show_spectrogram(self, state):
+        if state == 2:  # Checked state
+            self.ui.spectogram1.show()  # Show spectrogram1
+            self.ui.spectogram2.show()  # Show spectrogram2
+
+            # Adjust the layout to make space for the spectrogram graphs
+            self.ui.spectrogramLayout.addWidget(self.ui.spectogram1)
+            self.ui.spectrogramLayout.addWidget(self.ui.spectogram2)
+        else:
+            self.ui.spectogram1.hide()  # Hide spectrogram1
+            self.ui.spectogram2.hide()  # Hide spectrogram2
+
+            # Remove the spectrogram graphs from the layout
+            self.ui.spectrogramLayout.removeWidget(self.ui.spectogram1)
+            self.ui.spectrogramLayout.removeWidget(self.ui.spectogram2)
+
 
 
 
