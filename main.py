@@ -1,5 +1,6 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton, QSlider
+from PyQt6.QtCore import Qt
 import numpy as np
 import sys
 from PyQt6 import QtWidgets, uic
@@ -31,6 +32,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.graph_style_ui()
 
         self.ui.browseFile.clicked.connect(self.browse)
+        self.ui.modeList.currentIndexChanged.connect(self.handle_combobox_selection)
 
 
     def graph_style_ui(self):
@@ -133,6 +135,26 @@ class MainWindow(QtWidgets.QMainWindow):
             legend = self.ui.graph1.addLegend()
             legend.addItem(plot_item, name=signal.name)
 
+            
+
+    def add_sliders(self, num_sliders):
+        # Clear any existing sliders from the widget
+        for i in reversed(range(self.ui.slidersWidget.layout().count())):
+            self.ui.slidersWidget.layout().itemAt(i).widget().setParent(None)
+
+        # Create and add new sliders
+        for _ in range(num_sliders):
+            slider = QSlider()
+            slider.setOrientation(Qt.Orientation.Vertical)  # Vertical orientation (1)
+            self.ui.slidersWidget.layout().addWidget(slider)
+
+
+    def handle_combobox_selection(self):
+        current_index = self.ui.modeList.currentIndex()
+        if current_index ==0:
+            self.add_sliders(10)
+        else: self.add_sliders(4)
+   
 
 
 # @lru_cache(maxsize=128)
