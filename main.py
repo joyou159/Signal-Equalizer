@@ -16,7 +16,8 @@ from Signal import Signal
 # https://www.ffmpeg.org/download.html
 # https://www.geeksforgeeks.org/how-to-install-ffmpeg-on-windows/
 # setx PATH "C:\ffmpeg\bin;%PATH%"
-# restart 
+# restart
+
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -24,6 +25,17 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.init_ui()
 
+    def openNewWindow(self):
+        self.new_window = QtWidgets.QMainWindow()
+        # Load the UI of the new window
+        uic.loadUi('SmoothingWindow.ui', self.new_window)
+        self.new_window.show()
+        # Connect the signal to the method
+        self.new_window.closed.connect(self.onNewWindowClosed)
+
+    def onNewWindowClosed(self):
+        # Enable the main window when the new window is closed
+        self.setEnabled(True)
 
     def init_ui(self):
         # Load the UI Page
@@ -31,26 +43,26 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle("Signal Equlizer")
         self.graph_style_ui()
 
+        self.ui.smoothingWindow.clicked.connect(self.openNewWindow)
         self.ui.browseFile.clicked.connect(self.browse)
-        self.ui.modeList.currentIndexChanged.connect(self.handle_combobox_selection)
+        self.ui.modeList.currentIndexChanged.connect(
+            self.handle_combobox_selection)
         self.ui.spectogramCheck.stateChanged.connect(self.show_spectrogram)
-
 
     def graph_style_ui(self):
         # Set the background of graph1 and graph2 to transparent
         self.ui.graph1.setBackground("transparent")
         self.ui.graph2.setBackground("transparent")
-        
+
         # Set the background of spectogram1 and spectogram2 to transparent
         self.ui.spectogram1.setBackground("transparent")
         self.ui.spectogram2.setBackground("transparent")
-        
+
         # Add items to the modeList widget
         self.ui.modeList.addItem("Uniform Range")
         self.ui.modeList.addItem("Musical Instruments")
         self.ui.modeList.addItem("Animal Sounds")
         self.ui.modeList.addItem("ECG Abnormalities")
-
 
     def show_spectrogram(self, state):
         if state == 2:  # Checked state
@@ -68,9 +80,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.spectrogramLayout.removeWidget(self.ui.spectogram1)
             self.ui.spectrogramLayout.removeWidget(self.ui.spectogram2)
 
-
-
-
     def browse(self):
         file_filter = "Raw Data (*.csv *.wav *mp3)"
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -78,56 +87,52 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if file_path:
             file_name = os.path.basename(file_path)
-            self.open_file(file_path, file_name)    
-
+            self.open_file(file_path, file_name)
 
     def open_file(self, path: str, file_name: str):
-            # Lists to store time and data
-            time = []  # List to store time values
-            data = []  # List to store data values
+        # Lists to store time and data
+        time = []  # List to store time values
+        data = []  # List to store data values
 
-            # Extract the file extension (last 3 characters) from the path
-            filetype = path[-3:]
+        # Extract the file extension (last 3 characters) from the path
+        filetype = path[-3:]
 
-            if filetype in ["wav","mp3"]:
-                # Read the WAV file
-                audio = AudioSegment.from_file(path)
-                data = np.array(audio.get_array_of_samples())
-                # Create the time data
-                time = np.arange(len(data))
+        if filetype in ["wav", "mp3"]:
+            # Read the WAV file
+            audio = AudioSegment.from_file(path)
+            data = np.array(audio.get_array_of_samples())
+            # Create the time data
+            time = np.arange(len(data))
 
+        # Check if the file type is CSV
+        if filetype == "csv":
+            # Open the data file for reading ('r' mode)
+            with open(path, 'r') as data_file:
+                # Create a CSV reader object with a comma as the delimiter
+                data_reader = csv.reader(data_file, delimiter=',')
 
-            # Check if the file type is CSV
-            if filetype == "csv":
-                # Open the data file for reading ('r' mode)
-                with open(path, 'r') as data_file:
-                    # Create a CSV reader object with a comma as the delimiter
-                    data_reader = csv.reader(data_file, delimiter=',')
-                        
-                    # Skip the first row
-                    next(data_reader)
+                # Skip the first row
+                next(data_reader)
 
-                    # Iterate through each row (line) in the data file
-                    for row in data_reader:
+                # Iterate through each row (line) in the data file
+                for row in data_reader:
 
-                        # Extract the time value from the first column (index 0)
-                        time_value = float(row[0])
+                    # Extract the time value from the first column (index 0)
+                    time_value = float(row[0])
 
-                        # Extract the amplitude value from the second column (index 1)
-                        amplitude_value = float(row[1])
+                    # Extract the amplitude value from the second column (index 1)
+                    amplitude_value = float(row[1])
 
-                        # Append the time and amplitude values to respective lists
-                        time.append(time_value)
-                        data.append(amplitude_value)
+                    # Append the time and amplitude values to respective lists
+                    time.append(time_value)
+                    data.append(amplitude_value)
 
+        # Create a Signal object with the file name without the extension
+        signal = Signal(file_name[:-4])
 
-            # Create a Signal object with the file name without the extension
-            signal = Signal(file_name[:-4])
-
-            signal.data = data
-            signal.time = time
-            self.plot_temp(signal)
-            
+        signal.data = data
+        signal.time = time
+        self.plot_temp(signal)
 
     def plot_temp(self, signal):
 
@@ -144,7 +149,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
             # Plot the mixed waveform
             pen = pg.mkPen(color=(64, 92, 245), width=2)
-            plot_item = self.ui.graph1.plot(x_data, y_data, name=signal.name, pen=pen)
+            plot_item = self.ui.graph1.plot(
+                x_data, y_data, name=signal.name, pen=pen)
 
             # Check if there is already a legend and remove it
             if self.ui.graph1.plotItem.legend is not None:
@@ -154,8 +160,6 @@ class MainWindow(QtWidgets.QMainWindow):
             legend = self.ui.graph1.addLegend()
             legend.addItem(plot_item, name=signal.name)
 
-            
-
     def add_sliders(self, num_sliders):
         # Clear any existing sliders from the widget
         for i in reversed(range(self.ui.slidersWidget.layout().count())):
@@ -164,16 +168,16 @@ class MainWindow(QtWidgets.QMainWindow):
         # Create and add new sliders
         for _ in range(num_sliders):
             slider = QSlider()
-            slider.setOrientation(Qt.Orientation.Vertical)  # Vertical orientation (1)
+            # Vertical orientation (1)
+            slider.setOrientation(Qt.Orientation.Vertical)
             self.ui.slidersWidget.layout().addWidget(slider)
-
 
     def handle_combobox_selection(self):
         current_index = self.ui.modeList.currentIndex()
-        if current_index ==0:
+        if current_index == 0:
             self.add_sliders(10)
-        else: self.add_sliders(4)
-   
+        else:
+            self.add_sliders(4)
 
 
 # @lru_cache(maxsize=128)
