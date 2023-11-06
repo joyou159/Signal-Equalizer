@@ -17,32 +17,37 @@
    <string notr="true">background-color: #242526;</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout">
+   <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="spacing">
-       <number>20</number>
-      </property>
-      <property name="leftMargin">
-       <number>10</number>
-      </property>
-      <property name="topMargin">
-       <number>20</number>
-      </property>
-      <property name="rightMargin">
-       <number>40</number>
-      </property>
-      <item>
-       <widget class="QPushButton" name="browseFile">
-        <property name="font">
-         <font>
-          <family>-apple-system</family>
-          <pointsize>16</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
+     <layout class="QGridLayout" name="gridLayout" columnstretch="1,6" columnminimumwidth="0,0">
+      <item row="0" column="0">
+       <widget class="QFrame" name="browseFrame">
         <property name="styleSheet">
-         <string notr="true">QPushButton{
+         <string notr="true">
+   /*border: 1px solid #c0c0c0; /* Border color and width */
+    padding: 5px; /* Padding around the list items */
+background-color: #1b1d23;
+border: 1px solid rgba(255, 255, 255, 0);
+</string>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <widget class="QPushButton" name="browseFile">
+           <property name="font">
+            <font>
+             <family>-apple-system</family>
+             <pointsize>16</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton{
   appearance: button;
   backface-visibility: hidden;
   background-color: #405cf5;
@@ -75,33 +80,33 @@ QPushButton:pressed{
 background-color: #1c2973;
 }
 </string>
-        </property>
-        <property name="text">
-         <string>Browse File</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>icons/upload-.png</normaloff>icons/upload-.png</iconset>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>25</width>
-          <height>25</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="smoothingWindow">
-        <property name="font">
-         <font>
-          <family>-apple-system</family>
-          <pointsize>14</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QPushButton{
+           </property>
+           <property name="text">
+            <string>Browse File</string>
+           </property>
+           <property name="icon">
+            <iconset>
+             <normaloff>icons/upload-.png</normaloff>icons/upload-.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="smoothingWindow">
+           <property name="font">
+            <font>
+             <family>-apple-system</family>
+             <pointsize>14</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton{
   appearance: button;
   backface-visibility: hidden;
   background-color: #405cf5;
@@ -115,7 +120,7 @@ background-color: #1c2973;
   font-size: 100%;
   height: 44px;
   line-height: 1.15;
- margin: 5px 10px;
+ margin: 10px 10px;
   outline: none;
   overflow: hidden;
   padding: 0 10px;
@@ -134,71 +139,116 @@ QPushButton:pressed{
 background-color: #1c2973;
 }
 </string>
-        </property>
-        <property name="text">
-         <string>Smoothing</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>icons/signal-1-svgrepo-com.png</normaloff>icons/signal-1-svgrepo-com.png</iconset>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>25</width>
-          <height>25</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
-        <property name="spacing">
-         <number>3</number>
-        </property>
-        <item>
-         <widget class="QLabel" name="label">
-          <property name="font">
-           <font>
-            <family>Overpass SemiBold</family>
-            <pointsize>12</pointsize>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">color:rgb(255, 255, 255)</string>
-          </property>
-          <property name="text">
-           <string>Choose The Mode</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="modeList">
-          <property name="styleSheet">
-           <string notr="true">QComboBox {
+           </property>
+           <property name="text">
+            <string>Smoothing</string>
+           </property>
+           <property name="icon">
+            <iconset>
+             <normaloff>icons/signal-1-svgrepo-com.png</normaloff>icons/signal-1-svgrepo-com.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="Line" name="line_9">
+           <property name="styleSheet">
+            <string notr="true">/* Line style */
+
+  /* Set the width of the line */
+  width: 20px;
+
+  /* Set the height of the line */
+  height: 5px;
+
+  /* Set the background color of the line */
+  background-color: rgb(39, 44, 54);
+
+  /* Set the border of the line */
+  border: 10px;
+
+  /* Set the border radius of the line */
+  border-radius:5px;
+
+
+
+
+</string>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="modeLabel">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <family>Overpass SemiBold</family>
+               <pointsize>12</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color:rgb(255, 255, 255);
+background: rgba(74, 74, 74, 0);
+margin-top: 10px;</string>
+             </property>
+             <property name="text">
+              <string>Choose The Mode</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QComboBox" name="modeList">
+             <property name="styleSheet">
+              <string notr="true">QComboBox {
     font-family: &quot;Overpass&quot;;
     font-weight: 600; /* Semibold */
     font-size: 10pt; /* Adjust the font size as needed */
+    color: white; /* Set the text color to white */
+    border: 1px solid white; /* Set the border to 1px solid white */
+background: rgba(74, 74, 74, 0);
+	border-radius: 15px;
 }
+
 </string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="spectogram">
-        <property name="font">
-         <font>
-          <family>Overpass SemiBold</family>
-          <pointsize>14</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QCheckBox {
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="spectogram">
+           <property name="font">
+            <font>
+             <family>Overpass SemiBold</family>
+             <pointsize>14</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QCheckBox {
     spacing: 10px; /* Adjust the spacing between the checkbox and label */
 color:white;
+background: rgba(74, 74, 74, 0);
+margin-top: 12px;
 }
 
 QCheckBox::indicator {
@@ -226,101 +276,146 @@ QCheckBox::indicator:checked:hover {
     background-color: #2C40AB; /* Background color when the checked checkbox is hovered */
 }
 </string>
-        </property>
-        <property name="text">
-         <string>Spectogram</string>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>20</width>
-          <height>20</height>
-         </size>
-        </property>
-        <property name="tristate">
-         <bool>false</bool>
-        </property>
+           </property>
+           <property name="text">
+            <string>Spectogram</string>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="tristate">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="Line" name="line_10">
+           <property name="styleSheet">
+            <string notr="true">/* Line style */
+
+  /* Set the width of the line */
+  width: 20px;
+
+  /* Set the height of the line */
+  height: 5px;
+
+  /* Set the background color of the line */
+  background-color:rgb(39, 44, 54);
+
+  /* Set the border of the line */
+  border: 10px;
+
+  /* Set the border radius of the line */
+  border-radius:5px;
+
+
+
+
+</string>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
        </widget>
       </item>
-      <item>
-       <spacer name="verticalSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
+      <item row="0" column="1">
+       <widget class="QFrame" name="mainBodyframe">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(39, 44, 54);</string>
         </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
-       </spacer>
-      </item>
-     </layout>
-    </item>
-    <item row="0" column="1">
-     <layout class="QVBoxLayout" name="verticalLayout_5" stretch="2,1">
-      <property name="spacing">
-       <number>6</number>
-      </property>
-      <property name="leftMargin">
-       <number>10</number>
-      </property>
-      <property name="rightMargin">
-       <number>10</number>
-      </property>
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_4" stretch="2,2">
-        <property name="spacing">
-         <number>20</number>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
         </property>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="5,1">
-          <property name="spacing">
-           <number>20</number>
-          </property>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout">
-            <item>
-             <widget class="PlotWidget" name="graph1" native="true">
-              <property name="styleSheet">
-               <string notr="true">border-radius: 6px;</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="PlotWidget" name="graph2" native="true">
-              <property name="styleSheet">
-               <string notr="true">border-radius: 6px;</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_4">
-            <item>
-             <spacer name="horizontalSpacer_2">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QPushButton" name="playPause">
-              <property name="font">
-               <font>
-                <family>-apple-system</family>
-                <pointsize>14</pointsize>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">QPushButton{
+        <layout class="QGridLayout" name="gridLayout_3">
+         <item row="0" column="0">
+          <layout class="QVBoxLayout" name="mainbody" stretch="3,1">
+           <property name="spacing">
+            <number>6</number>
+           </property>
+           <property name="leftMargin">
+            <number>10</number>
+           </property>
+           <property name="rightMargin">
+            <number>10</number>
+           </property>
+           <item>
+            <layout class="QVBoxLayout" name="verticalGraphs" stretch="2,0,2">
+             <property name="spacing">
+              <number>20</number>
+             </property>
+             <item>
+              <layout class="QVBoxLayout" name="verticalLayout_3" stretch="5,1">
+               <property name="spacing">
+                <number>20</number>
+               </property>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout">
+                 <item>
+                  <widget class="PlotWidget" name="graph1" native="true">
+                   <property name="styleSheet">
+                    <string notr="true">border-radius: 6px;
+background: rgba(74, 74, 74, 0);</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="PlotWidget" name="graph2" native="true">
+                   <property name="styleSheet">
+                    <string notr="true">border-radius: 6px;
+background: rgba(74, 74, 74, 0);</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_4">
+                 <item>
+                  <spacer name="horizontalSpacer_2">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="playPause">
+                   <property name="font">
+                    <font>
+                     <family>-apple-system</family>
+                     <pointsize>14</pointsize>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">QPushButton{
 appearance: button;
 backface-visibility: hidden;
 background-color: #405cf5;
@@ -353,33 +448,33 @@ background-color: #283999;
 QPushButton:pressed{
 background-color: #1c2973;
 }</string>
-              </property>
-              <property name="text">
-               <string>Play</string>
-              </property>
-              <property name="icon">
-               <iconset>
-                <normaloff>icons/play-square-svgrepo-com.png</normaloff>icons/play-square-svgrepo-com.png</iconset>
-              </property>
-              <property name="iconSize">
-               <size>
-                <width>25</width>
-                <height>25</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="zoomIn">
-              <property name="font">
-               <font>
-                <family>-apple-system</family>
-                <pointsize>12</pointsize>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">QPushButton{
+                   </property>
+                   <property name="text">
+                    <string>Play</string>
+                   </property>
+                   <property name="icon">
+                    <iconset>
+                     <normaloff>icons/play-square-svgrepo-com.png</normaloff>icons/play-square-svgrepo-com.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>25</width>
+                     <height>25</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="zoomIn">
+                   <property name="font">
+                    <font>
+                     <family>-apple-system</family>
+                     <pointsize>12</pointsize>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">QPushButton{
 appearance: button;
 backface-visibility: hidden;
 background-color: #405cf5;
@@ -412,33 +507,33 @@ background-color: #283999;
 QPushButton:pressed{
 background-color: #1c2973;
 }</string>
-              </property>
-              <property name="text">
-               <string>Zoom </string>
-              </property>
-              <property name="icon">
-               <iconset>
-                <normaloff>icons/plus-square-svgrepo-com.png</normaloff>icons/plus-square-svgrepo-com.png</iconset>
-              </property>
-              <property name="iconSize">
-               <size>
-                <width>25</width>
-                <height>25</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="zoomOut">
-              <property name="font">
-               <font>
-                <family>-apple-system</family>
-                <pointsize>12</pointsize>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">QPushButton{
+                   </property>
+                   <property name="text">
+                    <string>Zoom </string>
+                   </property>
+                   <property name="icon">
+                    <iconset>
+                     <normaloff>icons/plus-square-svgrepo-com.png</normaloff>icons/plus-square-svgrepo-com.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>25</width>
+                     <height>25</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="zoomOut">
+                   <property name="font">
+                    <font>
+                     <family>-apple-system</family>
+                     <pointsize>12</pointsize>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">QPushButton{
 appearance: button;
 backface-visibility: hidden;
 background-color: #405cf5;
@@ -471,33 +566,33 @@ background-color: #283999;
 QPushButton:pressed{
 background-color: #1c2973;
 }</string>
-              </property>
-              <property name="text">
-               <string>Zoom </string>
-              </property>
-              <property name="icon">
-               <iconset>
-                <normaloff>icons/minus-square-svgrepo-com.png</normaloff>icons/minus-square-svgrepo-com.png</iconset>
-              </property>
-              <property name="iconSize">
-               <size>
-                <width>25</width>
-                <height>25</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="reset">
-              <property name="font">
-               <font>
-                <family>-apple-system</family>
-                <pointsize>14</pointsize>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">QPushButton{
+                   </property>
+                   <property name="text">
+                    <string>Zoom </string>
+                   </property>
+                   <property name="icon">
+                    <iconset>
+                     <normaloff>icons/minus-square-svgrepo-com.png</normaloff>icons/minus-square-svgrepo-com.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>25</width>
+                     <height>25</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="reset">
+                   <property name="font">
+                    <font>
+                     <family>-apple-system</family>
+                     <pointsize>14</pointsize>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">QPushButton{
 appearance: button;
 backface-visibility: hidden;
 background-color: #405cf5;
@@ -530,48 +625,48 @@ background-color: #283999;
 QPushButton:pressed{
 background-color: #1c2973;
 }</string>
-              </property>
-              <property name="text">
-               <string>Reset</string>
-              </property>
-              <property name="icon">
-               <iconset>
-                <normaloff>icons/reset-svgrepo-com.png</normaloff>icons/reset-svgrepo-com.png</iconset>
-              </property>
-              <property name="iconSize">
-               <size>
-                <width>25</width>
-                <height>25</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_3">
-              <property name="spacing">
-               <number>3</number>
-              </property>
-              <item>
-               <widget class="QLabel" name="label_2">
-                <property name="font">
-                 <font>
-                  <family>Overpass SemiBold</family>
-                  <pointsize>12</pointsize>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">color:rgb(255, 255, 255)</string>
-                </property>
-                <property name="text">
-                 <string>Speed</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QSlider" name="speedSlider">
-                <property name="styleSheet">
-                 <string notr="true">
+                   </property>
+                   <property name="text">
+                    <string>Reset</string>
+                   </property>
+                   <property name="icon">
+                    <iconset>
+                     <normaloff>icons/reset-svgrepo-com.png</normaloff>icons/reset-svgrepo-com.png</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>25</width>
+                     <height>25</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="horizontalLayout_3">
+                   <property name="spacing">
+                    <number>3</number>
+                   </property>
+                   <item>
+                    <widget class="QLabel" name="label_2">
+                     <property name="font">
+                      <font>
+                       <family>Overpass SemiBold</family>
+                       <pointsize>12</pointsize>
+                       <bold>true</bold>
+                      </font>
+                     </property>
+                     <property name="styleSheet">
+                      <string notr="true">color:rgb(255, 255, 255)</string>
+                     </property>
+                     <property name="text">
+                      <string>Speed</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QSlider" name="speedSlider">
+                     <property name="styleSheet">
+                      <string notr="true">
 
 /* Style for the slider handle (thumb) */
 QSlider::handle {
@@ -584,88 +679,130 @@ QSlider::handle:pressed {
 background: #992a27; /* Color of the handle when pressed */
 border: 1px solid #3498db; /* Border of the handle when pressed */
 }</string>
-                </property>
+                     </property>
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="horizontalSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>40</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="Line" name="line_8">
+               <property name="styleSheet">
+                <string notr="true">/* Line style */
+
+  /* Set the width of the line */
+  width: 20px;
+
+  /* Set the height of the line */
+  height: 5px;
+
+  /* Set the background color of the line */
+  background-color: #3a3b3c;
+
+  /* Set the border of the line */
+  border: 10px;
+
+  /* Set the border radius of the line */
+  border-radius:5px;
+
+
+
+</string>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_2">
+               <item>
+                <widget class="PlotWidget" name="spectogram1" native="true">
+                 <property name="styleSheet">
+                  <string notr="true">border-radius: 6px;
+background: rgba(74, 74, 74, 0);</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="PlotWidget" name="spectogram2" native="true">
+                 <property name="styleSheet">
+                  <string notr="true">border-radius: 6px;
+background: rgba(74, 74, 74, 0);</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QWidget" name="slidersWidget" native="true">
+             <property name="styleSheet">
+              <string notr="true">background: rgba(74, 74, 74, 0);</string>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QSlider" name="verticalSlider">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Vertical</enum>
                 </property>
                </widget>
               </item>
               <item>
-               <spacer name="horizontalSpacer">
+               <widget class="QSlider" name="verticalSlider_2">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Vertical</enum>
                 </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="verticalSlider_3">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
                 </property>
-               </spacer>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="verticalSlider_4">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="verticalSlider_5">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+               </widget>
               </item>
              </layout>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="PlotWidget" name="spectogram1" native="true">
-            <property name="styleSheet">
-             <string notr="true">border-radius: 6px;</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="PlotWidget" name="spectogram2" native="true">
-            <property name="styleSheet">
-             <string notr="true">border-radius: 6px;</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="QWidget" name="slidersWidget" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_5">
-         <item>
-          <widget class="QSlider" name="verticalSlider">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSlider" name="verticalSlider_2">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSlider" name="verticalSlider_3">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSlider" name="verticalSlider_4">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSlider" name="verticalSlider_5">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-          </widget>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
@@ -684,7 +821,6 @@ border: 1px solid #3498db; /* Border of the handle when pressed */
     </rect>
    </property>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <customwidgets>
   <customwidget>

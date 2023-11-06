@@ -5,6 +5,17 @@ import sys
 from PyQt6 import QtWidgets, uic
 import pyqtgraph as pg
 import qdarkstyle
+import os
+import csv
+from pydub import AudioSegment
+
+from Signal import Signal
+
+# pip install pyqtgraph pydub
+# https://www.ffmpeg.org/download.html
+# https://www.geeksforgeeks.org/how-to-install-ffmpeg-on-windows/
+# setx PATH "C:\ffmpeg\bin;%PATH%"
+# restart 
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -17,14 +28,111 @@ class MainWindow(QtWidgets.QMainWindow):
         # Load the UI Page
         self.ui = uic.loadUi('Mainwindow.ui', self)
         self.setWindowTitle("Signal Equlizer")
+        self.graph_style_ui()
+
+        self.ui.browseFile.clicked.connect(self.browse)
+
+
+    def graph_style_ui(self):
+        # Set the background of graph1 and graph2 to transparent
         self.ui.graph1.setBackground("transparent")
         self.ui.graph2.setBackground("transparent")
+        
+        # Set the background of spectogram1 and spectogram2 to transparent
         self.ui.spectogram1.setBackground("transparent")
         self.ui.spectogram2.setBackground("transparent")
-        self.ui.modeList.addItem("number1")
-        self.ui.modeList.addItem("number2")
-        self.ui.modeList.addItem("number3")
-        self.ui.modeList.addItem("number4")
+        
+        # Add items to the modeList widget
+        self.ui.modeList.addItem("Uniform Range")
+        self.ui.modeList.addItem("Musical Instruments")
+        self.ui.modeList.addItem("Animal Sounds")
+        self.ui.modeList.addItem("ECG Abnormalities")
+
+
+
+    def browse(self):
+        file_filter = "Raw Data (*.csv *.wav *mp3)"
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            None, 'Open Signal File', './', filter=file_filter)
+
+        if file_path:
+            file_name = os.path.basename(file_path)
+            self.open_file(file_path, file_name)    
+
+
+    def open_file(self, path: str, file_name: str):
+            # Lists to store time and data
+            time = []  # List to store time values
+            data = []  # List to store data values
+
+            # Extract the file extension (last 3 characters) from the path
+            filetype = path[-3:]
+
+            if filetype in ["wav","mp3"]:
+                # Read the WAV file
+                audio = AudioSegment.from_file(path)
+                data = np.array(audio.get_array_of_samples())
+                # Create the time data
+                time = np.arange(len(data))
+
+
+            # Check if the file type is CSV
+            if filetype == "csv":
+                # Open the data file for reading ('r' mode)
+                with open(path, 'r') as data_file:
+                    # Create a CSV reader object with a comma as the delimiter
+                    data_reader = csv.reader(data_file, delimiter=',')
+                        
+                    # Skip the first row
+                    next(data_reader)
+
+                    # Iterate through each row (line) in the data file
+                    for row in data_reader:
+
+                        # Extract the time value from the first column (index 0)
+                        time_value = float(row[0])
+
+                        # Extract the amplitude value from the second column (index 1)
+                        amplitude_value = float(row[1])
+
+                        # Append the time and amplitude values to respective lists
+                        time.append(time_value)
+                        data.append(amplitude_value)
+
+
+            # Create a Signal object with the file name without the extension
+            signal = Signal(file_name[:-4])
+
+            signal.data = data
+            signal.time = time
+            self.plot_temp(signal)
+            
+
+    def plot_temp(self, signal):
+
+        if signal:
+            self.ui.graph1.clear()
+
+            # Create a plot item
+            self.ui.graph1.setLabel('left', "Amplitude")
+            self.ui.graph1.setLabel('bottom', "Time")
+
+            # Initialize the time axis (assuming all signals have the same time axis)
+            x_data = signal.time
+            y_data = signal.data
+
+            # Plot the mixed waveform
+            pen = pg.mkPen(color=(64, 92, 245), width=2)
+            plot_item = self.ui.graph1.plot(x_data, y_data, name=signal.name, pen=pen)
+
+            # Check if there is already a legend and remove it
+            if self.ui.graph1.plotItem.legend is not None:
+                self.ui.graph1.plotItem.legend.clear()
+
+            # Add a legend to the plot
+            legend = self.ui.graph1.addLegend()
+            legend.addItem(plot_item, name=signal.name)
+
 
 
 # @lru_cache(maxsize=128)
