@@ -24,14 +24,54 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.init_ui()
+        self.selected_function =None
+        self.smooth_time = []
+        self.smooth_data = []
 
     def openNewWindow(self):
         self.new_window = QtWidgets.QMainWindow()
-        # Load the UI of the new window
         uic.loadUi('SmoothingWindow.ui', self.new_window)
+        self.new_window.functionList.addItem('Rectangle')
+        self.new_window.functionList.addItem('Hamming')
+        self.new_window.functionList.addItem('Hanning')
+        self.new_window.functionList.addItem('Gaussian')
+        self.new_window.functionList.setCurrentIndex(0)
+        self.handle_selected_function()
+        self.new_window.observe.clicked.connect(self.observe)
+        self.new_window.functionList.currentIndexChanged.connect(self.handle_selected_function)
+
         self.new_window.show()
-        # Connect the signal to the method
-        self.new_window.closed.connect(self.onNewWindowClosed)
+        self.new_window.destroyed.connect(self.onNewWindowClosed)
+        
+    def handle_selected_function(self):
+        self.selected_function = self.new_window.functionList.currentText()
+
+    def observe(self):
+        frequency = float(self.new_window.freqSpinBox.text())
+        amplitude = float(self.new_window.ampSpinBox.text())
+        phase = float(self.new_window.phaseSpinBox.text())
+        
+        if self.selected_function == 'Rectangle':
+            self.smooth_time = np.linspace(0, 1, 1000)  
+            self.smooth_data = np.zeros(len(self.smooth_time))
+            self.smooth_data[int(phase * len(self.smooth_time)) : int(phase * len(self.smooth_time)) + int(44100 / frequency)] = amplitude
+            self.smoothing_real_time()
+        elif self.selected_function == 'Hamming':
+            self.smooth_time = np.linspace(0, 1, 1000) 
+            self.smooth_data = amplitude * np.hamming(len(self.smooth_time))
+            self.smoothing_real_time()
+        elif self.selected_function == 'Hanning':
+            self.smooth_time = np.linspace(0, 1, 1000)  
+            self.smooth_data = amplitude * np.hanning(len(self.smooth_time))
+            self.smoothing_real_time()
+        elif self.selected_function == 'Gaussian':
+            self.smooth_time = np.linspace(0, 1, 1000) 
+            self.smooth_data = amplitude * np.exp(-0.5 * ((self.smooth_time - 0.5) / (0.1 * frequency))**2)
+            self.smoothing_real_time()
+
+    def smoothing_real_time(self):
+        self.new_window.smoothingGraph.clear()
+        self.new_window.smoothingGraph.plot(self.smooth_time, self.smooth_data)
 
     def onNewWindowClosed(self):
         # Enable the main window when the new window is closed
@@ -45,9 +85,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.smoothingWindow.clicked.connect(self.openNewWindow)
         self.ui.browseFile.clicked.connect(self.browse)
+        
+        self.ui.modeList.setCurrentIndex(0)
+        self.handle_combobox_selection()
+        
         self.ui.modeList.currentIndexChanged.connect(
             self.handle_combobox_selection)
         self.ui.spectogramCheck.stateChanged.connect(self.show_spectrogram)
+        
 
     def graph_style_ui(self):
         # Set the background of graph1 and graph2 to transparent
@@ -132,6 +177,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         signal.data = data
         signal.time = time
+        self.data_split(signal)
+        print(len(signal.components))
         self.plot_temp(signal)
 
     def plot_temp(self, signal):
@@ -178,6 +225,27 @@ class MainWindow(QtWidgets.QMainWindow):
             self.add_sliders(10)
         else:
             self.add_sliders(4)
+            
+    def data_split(self,signal):
+        current_index = self.ui.modeList.currentIndex()
+        if current_index == 0:
+            num_slices = 10
+            data_length = len(signal.data)
+            slice_size = data_length // num_slices  
+
+            for i in range(num_slices):
+                start = i * slice_size  
+                end = start + slice_size 
+                signal.add_component(signal.data[start:end])
+        else:
+            num_slices = 4
+            data_length = len(signal.data)
+            slice_size = data_length // num_slices  
+
+            for i in range(num_slices):
+                start = i * slice_size  
+                end = start + slice_size 
+                signal.add_component(signal.data[start:end])
 
 
 # @lru_cache(maxsize=128)

@@ -5,6 +5,7 @@ class Signal:
         self.data = []
         self.time = []
         self.maxFreq = None
+        self.components=[]
 
     def add_component(self, component):
         self.components.append(component)
