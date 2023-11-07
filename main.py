@@ -9,8 +9,10 @@ import qdarkstyle
 import os
 import csv
 from pydub import AudioSegment
-
+import math
 from Signal import Signal
+from scipy import signal
+from scipy.fft import fft, fftshift
 
 # pip install pyqtgraph pydub
 # https://www.ffmpeg.org/download.html
@@ -24,57 +26,119 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.init_ui()
-        self.selected_function =None
+        self.selected_function = None
         self.smooth_time = []
         self.smooth_data = []
+        self.our_signal = None
+
+    def rectangle_window(self, amplitude, freq, t):
+        return amplitude * signal.square(2 * np.pi * freq * t)
+
+    def hamming_window(self, N, amplitude):
+        return amplitude * signal.windows.hamming(N)
+
+    def hanning_window(self, N, amplitude):
+        return amplitude * signal.windows.hann(N)
+
+    def gaussian_window(self, N, amplitude, std):
+        return amplitude * signal.windows.gaussian(N, std)
 
     def openNewWindow(self):
+        self.setEnabled(False)
+
         self.new_window = QtWidgets.QMainWindow()
         uic.loadUi('SmoothingWindow.ui', self.new_window)
         self.new_window.functionList.addItem('Rectangle')
         self.new_window.functionList.addItem('Hamming')
         self.new_window.functionList.addItem('Hanning')
         self.new_window.functionList.addItem('Gaussian')
+        self.new_window.freqSpinBox.setValue(1)
+        self.new_window.ampSpinBox.setValue(1)
+        self.new_window.stdSpinBox.setValue(1)
+        self.new_window.samplesSpinBox.setValue(1)
         self.new_window.functionList.setCurrentIndex(0)
         self.handle_selected_function()
-        self.new_window.observe.clicked.connect(self.observe)
-        self.new_window.functionList.currentIndexChanged.connect(self.handle_selected_function)
+
+        self.new_window.freqSpinBox.valueChanged.connect(
+            self.handle_selected_function)
+        self.new_window.ampSpinBox.valueChanged.connect(
+            self.handle_selected_function)
+        self.new_window.stdSpinBox.valueChanged.connect(
+            self.handle_selected_function)
+
+        self.new_window.functionList.currentIndexChanged.connect(
+            self.handle_selected_function)
+
+        self.new_window.save.clicked.connect(self.save)
 
         self.new_window.show()
         self.new_window.destroyed.connect(self.onNewWindowClosed)
-        
+
     def handle_selected_function(self):
         self.selected_function = self.new_window.functionList.currentText()
 
-    def observe(self):
-        frequency = float(self.new_window.freqSpinBox.text())
-        amplitude = float(self.new_window.ampSpinBox.text())
-        phase = float(self.new_window.phaseSpinBox.text())
-        
+        if self.selected_function == 'Gaussian':
+            self.new_window.samplesSpinBox.show()
+            self.new_window.samples.show()
+            self.new_window.stdSpinBox.show()
+            self.new_window.std.show()
+        elif self.selected_function == 'Rectangle':
+            self.new_window.freqSpinBox.show()
+            self.new_window.freq.show()
+            self.new_window.stdSpinBox.hide()
+            self.new_window.std.hide()
+            self.new_window.samplesSpinBox.hide()
+            self.new_window.samples.hide()
+        else:
+            self.new_window.samplesSpinBox.show()
+            self.new_window.samples.show()
+            self.new_window.freqSpinBox.hide()
+            self.new_window.freq.hide()
+            self.new_window.stdSpinBox.hide()
+            self.new_window.std.hide()
+
+        samples = int(self.new_window.samplesSpinBox.text())
+        freq = int(self.new_window.freqSpinBox.text())
+        amplitude = int(self.new_window.ampSpinBox.text())
+        std = int(self.new_window.stdSpinBox.text())
+        self.smooth_time = np.linspace(0, 1, 500, endpoint=False)
+
         if self.selected_function == 'Rectangle':
-            self.smooth_time = np.linspace(0, 1, 1000)  
-            self.smooth_data = np.zeros(len(self.smooth_time))
-            self.smooth_data[int(phase * len(self.smooth_time)) : int(phase * len(self.smooth_time)) + int(44100 / frequency)] = amplitude
-            self.smoothing_real_time()
+            self.smooth_data = self.rectangle_window(
+                amplitude, freq, self.smooth_time)
+
         elif self.selected_function == 'Hamming':
-            self.smooth_time = np.linspace(0, 1, 1000) 
-            self.smooth_data = amplitude * np.hamming(len(self.smooth_time))
-            self.smoothing_real_time()
+            self.smooth_data = self.hamming_window(samples, amplitude)
+
         elif self.selected_function == 'Hanning':
-            self.smooth_time = np.linspace(0, 1, 1000)  
-            self.smooth_data = amplitude * np.hanning(len(self.smooth_time))
-            self.smoothing_real_time()
+            self.smooth_data = self.hanning_window(samples, amplitude)
+
         elif self.selected_function == 'Gaussian':
-            self.smooth_time = np.linspace(0, 1, 1000) 
-            self.smooth_data = amplitude * np.exp(-0.5 * ((self.smooth_time - 0.5) / (0.1 * frequency))**2)
-            self.smoothing_real_time()
+            self.smooth_data = self.gaussian_window(samples, amplitude, std)
+
+        A = fft(self.smooth_data, 2048) / (len(self.smooth_data)/2.0)
+        self.freq = np.linspace(-0.5, 0.5, len(A))
+        self.response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
+
+        self.smoothing_real_time()
 
     def smoothing_real_time(self):
-        self.new_window.smoothingGraph.clear()
-        self.new_window.smoothingGraph.plot(self.smooth_time, self.smooth_data)
+        self.new_window.smoothingGraph1.clear()
+
+        self.new_window.smoothingGraph2.clear()
+
+        self.new_window.smoothingGraph1.plot(
+            self.smooth_data)
+        self.new_window.smoothingGraph2.plot(
+            self.freq, self.response)
+
+    def save(self):
+        self.our_signal.smoothing_window = self.selected_function
+        self.our_signal.smoothing_window_data = self.smooth_data
+        self.onNewWindowClosed()
 
     def onNewWindowClosed(self):
-        # Enable the main window when the new window is closed
+        self.new_window.close()
         self.setEnabled(True)
 
     def init_ui(self):
@@ -85,14 +149,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.smoothingWindow.clicked.connect(self.openNewWindow)
         self.ui.browseFile.clicked.connect(self.browse)
-        
+
         self.ui.modeList.setCurrentIndex(0)
         self.handle_combobox_selection()
-        
+
         self.ui.modeList.currentIndexChanged.connect(
             self.handle_combobox_selection)
         self.ui.spectogramCheck.stateChanged.connect(self.show_spectrogram)
-        
 
     def graph_style_ui(self):
         # Set the background of graph1 and graph2 to transparent
@@ -173,13 +236,13 @@ class MainWindow(QtWidgets.QMainWindow):
                     data.append(amplitude_value)
 
         # Create a Signal object with the file name without the extension
-        signal = Signal(file_name[:-4])
+        self.our_signal = Signal(file_name[:-4])
 
-        signal.data = data
-        signal.time = time
-        self.data_split(signal)
-        print(len(signal.components))
-        self.plot_temp(signal)
+        self.our_signal.data = data
+        self.our_signal.time = time
+        self.data_split(self.our_signal)
+        print(len(self.our_signal.components))
+        self.plot_temp(self.our_signal)
 
     def plot_temp(self, signal):
 
@@ -225,26 +288,26 @@ class MainWindow(QtWidgets.QMainWindow):
             self.add_sliders(10)
         else:
             self.add_sliders(4)
-            
-    def data_split(self,signal):
+
+    def data_split(self, signal):
         current_index = self.ui.modeList.currentIndex()
         if current_index == 0:
             num_slices = 10
             data_length = len(signal.data)
-            slice_size = data_length // num_slices  
+            slice_size = data_length // num_slices
 
             for i in range(num_slices):
-                start = i * slice_size  
-                end = start + slice_size 
+                start = i * slice_size
+                end = start + slice_size
                 signal.add_component(signal.data[start:end])
         else:
             num_slices = 4
             data_length = len(signal.data)
-            slice_size = data_length // num_slices  
+            slice_size = data_length // num_slices
 
             for i in range(num_slices):
-                start = i * slice_size  
-                end = start + slice_size 
+                start = i * slice_size
+                end = start + slice_size
                 signal.add_component(signal.data[start:end])
 
 

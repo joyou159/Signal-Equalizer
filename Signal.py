@@ -5,10 +5,9 @@ class Signal:
         self.data = []
         self.time = []
         self.maxFreq = None
-        self.components=[]
+        self.components = []
+        self.smoothing_window_name = None
+        self.smoothing_window_data = None
 
     def add_component(self, component):
         self.components.append(component)
-
-    def change_sample_rate(self, new_sample_rate):
-        self.sample_rate = new_sample_rate
