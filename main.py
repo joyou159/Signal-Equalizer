@@ -164,7 +164,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Create and add new sliders
         for _ in range(num_sliders):
             slider = QSlider()
-            slider.setOrientation(Qt.Orientation.Vertical)  # Vertical orientation (1)
+            slider.setOrientation(Qt.Orientation.Vertical)  # Vertical orientation 
             self.ui.slidersWidget.layout().addWidget(slider)
 
 
