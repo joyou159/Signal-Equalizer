@@ -34,14 +34,6 @@ background: rgba(74, 74, 74, 0);</string>
           </property>
          </widget>
         </item>
-        <item>
-         <widget class="PlotWidget" name="smoothingGraph2" native="true">
-          <property name="styleSheet">
-           <string notr="true">border-radius: 6px;
-background: rgba(74, 74, 74, 0);</string>
-          </property>
-         </widget>
-        </item>
        </layout>
       </item>
       <item>
@@ -247,110 +239,7 @@ QSpinBox::up-button:hover, QSpinBox::down-button:hover {
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0">
-            <item>
-             <spacer name="horizontalSpacer_4">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QLabel" name="freq">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="font">
-               <font>
-                <family>Overpass SemiBold</family>
-                <pointsize>11</pointsize>
-                <bold>false</bold>
-                <kerning>true</kerning>
-               </font>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color:white;
-font-weight:10000px;
-margin: 5px 0 ;</string>
-              </property>
-              <property name="text">
-               <string>Freq        </string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="freqSpinBox">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">/* QSpinBox */
-QSpinBox {
-    background-color: #f0f0f0; /* Light background color */
-    color: #405cf5; /* Dark text color */
-    border: 2px solid #405cf5; /* Add a border for a modern look */
-    border-radius: 10px; /* Slightly rounder corners */
-    padding: 3px 8px; /* Increase padding for spacing */
-	padding-left: 15px;
-	margin: 0 5px;
-    font-weight: bold;
-    font-size: 18px; /* Adjust font size */
-    text-align: center;
-	height:20px; 
-width: 50px;
-}
-
-/* QSpinBox Up Button (on the right) */
-QSpinBox::up-button {
-	
-	image: url(Icons/plus-circle.png);
-    border-radius: 50%; /* Round button corners */
-    width: 25px;
-    height: 25px;
-    subcontrol-position: right; /* Place the up-button on the right */
-}
-
-/* QSpinBox Down Button (on the left) */
-QSpinBox::down-button {
-	
-	image: url(Icons/minus-circle.png);
-    border-radius: 5px; /* Round button corners */
-    width: 25px;
-    height: 25px;
-    subcontrol-position: left; /* Place the down-button on the left */
-}
-
-QSpinBox::up-button:hover, QSpinBox::down-button:hover {
-    background-color: #9fadfa; /* Change button color on hover */
-	 border-radius: 10px;
-}
-</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
+           <layout class="QHBoxLayout" name="horizontalLayout" stretch=""/>
           </item>
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_6">

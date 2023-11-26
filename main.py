@@ -1,6 +1,6 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton, QSlider
-from PyQt6.QtCore import Qt ,QTimer
+from PyQt6.QtCore import Qt, QTimer
 import numpy as np
 import pandas as pd
 import sys
@@ -16,7 +16,7 @@ from scipy.fft import fft, fftshift
 import librosa
 from IPython.display import display, Audio
 
-# pyinstrument 
+# pyinstrument
 # pip install pyqtgraph pydub
 # https://www.ffmpeg.org/download.html
 # https://www.geeksforgeeks.org/how-to-install-ffmpeg-on-windows/
@@ -38,17 +38,17 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.timer.timeout.connect(self.update_plot)
         # self.timer.start(1000)  # Update plot every 1 second (adjust this as needed)
 
-    def rectangle_window(self, amplitude, freq, t):
-        return amplitude * signal.square(2 * np.pi * freq * t)
+    def rectangle_window(self, amplitude, N):
+        return amplitude * signal.windows.boxcar(N)
 
     def hamming_window(self, N, amplitude):
-        return amplitude * signal.windows.hamming(N)
+        return amplitude * signal.windows.hamming(N, sym=False)
 
     def hanning_window(self, N, amplitude):
-        return amplitude * signal.windows.hann(N)
+        return amplitude * signal.windows.hann(N, sym=False)
 
     def gaussian_window(self, N, amplitude, std):
-        return amplitude * signal.windows.gaussian(N, std)
+        return amplitude * signal.windows.gaussian(N, std, sym=False)
 
     def openNewWindow(self):
         self.setEnabled(False)
@@ -59,15 +59,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.new_window.functionList.addItem('Hamming')
         self.new_window.functionList.addItem('Hanning')
         self.new_window.functionList.addItem('Gaussian')
-        self.new_window.freqSpinBox.setValue(1)
         self.new_window.ampSpinBox.setValue(1)
         self.new_window.stdSpinBox.setValue(1)
         self.new_window.samplesSpinBox.setValue(1)
         self.new_window.functionList.setCurrentIndex(0)
         self.handle_selected_function()
 
-        self.new_window.freqSpinBox.valueChanged.connect(
-            self.handle_selected_function)
         self.new_window.ampSpinBox.valueChanged.connect(
             self.handle_selected_function)
         self.new_window.stdSpinBox.valueChanged.connect(
@@ -85,34 +82,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.selected_function = self.new_window.functionList.currentText()
 
         if self.selected_function == 'Gaussian':
-            self.new_window.samplesSpinBox.show()
-            self.new_window.samples.show()
             self.new_window.stdSpinBox.show()
             self.new_window.std.show()
-        elif self.selected_function == 'Rectangle':
-            self.new_window.freqSpinBox.show()
-            self.new_window.freq.show()
-            self.new_window.stdSpinBox.hide()
-            self.new_window.std.hide()
-            self.new_window.samplesSpinBox.hide()
-            self.new_window.samples.hide()
         else:
-            self.new_window.samplesSpinBox.show()
-            self.new_window.samples.show()
-            self.new_window.freqSpinBox.hide()
-            self.new_window.freq.hide()
             self.new_window.stdSpinBox.hide()
             self.new_window.std.hide()
 
         samples = int(self.new_window.samplesSpinBox.text())
-        freq = int(self.new_window.freqSpinBox.text())
         amplitude = int(self.new_window.ampSpinBox.text())
         std = int(self.new_window.stdSpinBox.text())
         self.smooth_time = np.linspace(0, 1, 500, endpoint=False)
 
         if self.selected_function == 'Rectangle':
             self.smooth_data = self.rectangle_window(
-                amplitude, freq, self.smooth_time)
+                amplitude, samples)
 
         elif self.selected_function == 'Hamming':
             self.smooth_data = self.hamming_window(samples, amplitude)
@@ -132,12 +115,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def smoothing_real_time(self):
         self.new_window.smoothingGraph1.clear()
 
-        self.new_window.smoothingGraph2.clear()
-
         self.new_window.smoothingGraph1.plot(
             self.smooth_data)
-        self.new_window.smoothingGraph2.plot(
-            self.freq, self.response)
 
     def save(self):
         self.our_signal.smoothing_window = self.selected_function
@@ -196,7 +175,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram1)
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram2)
 
-
     def browse(self):
         file_filter = "Raw Data (*.csv *.wav *.mp3)"
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -221,9 +199,10 @@ class MainWindow(QtWidgets.QMainWindow):
             time = np.linspace(0, duration, len(data))
 
         elif filetype == "csv":
-            data_reader = pd.read_csv(path, delimiter=',', skiprows=1)  # Skip header row
-            time = data_reader.iloc[:, 0].astype(float).tolist()  
-            data = data_reader.iloc[:, 1].astype(float).tolist()  
+            data_reader = pd.read_csv(
+                path, delimiter=',', skiprows=1)  # Skip header row
+            time = data_reader.iloc[:, 0].astype(float).tolist()
+            data = data_reader.iloc[:, 1].astype(float).tolist()
 
         signal = Signal(file_name[:-4])
         signal.data = data
@@ -241,7 +220,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.graph1.clear()
             self.ui.graph1.setLabel('left', "Amplitude")
             self.ui.graph1.setLabel('bottom', "Time")
-            plot_item = self.ui.graph1.plot(signal.time, signal.data, name=signal.name, pen=(64, 92, 245))
+            plot_item = self.ui.graph1.plot(
+                signal.time, signal.data, name=signal.name, pen=(64, 92, 245))
 
             # Check if there is already a legend and remove it
             if self.ui.graph1.plotItem.legend is not None:
@@ -266,7 +246,8 @@ class MainWindow(QtWidgets.QMainWindow):
         data_length = len(signal.data)
         slice_size = data_length // num_slices
 
-        signal.components = [signal.data[i * slice_size:(i + 1) * slice_size] for i in range(num_slices)]
+        signal.components = [
+            signal.data[i * slice_size:(i + 1) * slice_size] for i in range(num_slices)]
 
     def add_sliders(self, num_sliders):
         layout = self.ui.slidersWidget.layout()
@@ -289,6 +270,7 @@ def main():
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec())
+
 
 if __name__ == '__main__':
     main()
