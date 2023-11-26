@@ -1,13 +1,13 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton, QSlider
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton, QSlider
+from PyQt6.QtCore import Qt ,QTimer
 import numpy as np
+import pandas as pd
 import sys
 from PyQt6 import QtWidgets, uic
 import pyqtgraph as pg
 import qdarkstyle
 import os
-import csv
 from pydub import AudioSegment
 import math
 from Signal import Signal
@@ -16,6 +16,7 @@ from scipy.fft import fft, fftshift
 import librosa
 from IPython.display import display, Audio
 
+# pyinstrument 
 # pip install pyqtgraph pydub
 # https://www.ffmpeg.org/download.html
 # https://www.geeksforgeeks.org/how-to-install-ffmpeg-on-windows/
@@ -32,6 +33,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.smooth_time = []
         self.smooth_data = []
         self.our_signal = None
+
+        # self.timer = QTimer(self)
+        # self.timer.timeout.connect(self.update_plot)
+        # self.timer.start(1000)  # Update plot every 1 second (adjust this as needed)
 
     def rectangle_window(self, amplitude, freq, t):
         return amplitude * signal.square(2 * np.pi * freq * t)
@@ -193,7 +198,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def browse(self):
-        file_filter = "Raw Data (*.csv *.wav *mp3)"
+        file_filter = "Raw Data (*.csv *.wav *.mp3)"
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
             None, 'Open Signal File', './', filter=file_filter)
 
@@ -202,72 +207,41 @@ class MainWindow(QtWidgets.QMainWindow):
             self.open_file(file_path, file_name)
 
     def open_file(self, path: str, file_name: str):
-        # Lists to store time and data
-        time = []  # List to store time values
-        data = []  # List to store data values
+        data = []
+        time = []
+        sample_rate = 0
 
-        # Extract the file extension (last 3 characters) from the path
-        filetype = path[-3:]
+        # Extract the file extension
+        filetype = path.split('.')[-1]
 
         if filetype in ["wav", "mp3"]:
-            # Read the audio file using librosa
             data, sample_rate = librosa.load(path)
-
-            # Calculate the time data
             duration = librosa.get_duration(y=data, sr=sample_rate)
+            print(len(data))
             time = np.linspace(0, duration, len(data))
 
-        # Check if the file type is CSV
-        if filetype == "csv":
-            # Open the data file for reading ('r' mode)
-            with open(path, 'r') as data_file:
-                # Create a CSV reader object with a comma as the delimiter
-                data_reader = csv.reader(data_file, delimiter=',')
+        elif filetype == "csv":
+            data_reader = pd.read_csv(path, delimiter=',', skiprows=1)  # Skip header row
+            time = data_reader.iloc[:, 0].astype(float).tolist()  
+            data = data_reader.iloc[:, 1].astype(float).tolist()  
 
-                # Skip the first row
-                next(data_reader)
+        signal = Signal(file_name[:-4])
+        signal.data = data
+        signal.time = time
+        signal.sr = sample_rate
+        self.process_signal(signal)
 
-                # Iterate through each row (line) in the data file
-                for row in data_reader:
+    def process_signal(self, signal):
+        self.plot_signal(signal)
+        self.display_audio(signal)
+        self.split_data(signal)
 
-                    # Extract the time value from the first column (index 0)
-                    time_value = float(row[0])
-
-                    # Extract the amplitude value from the second column (index 1)
-                    amplitude_value = float(row[1])
-
-                    # Append the time and amplitude values to respective lists
-                    time.append(time_value)
-                    data.append(amplitude_value)
-
-        # Create a Signal object with the file name without the extension
-        self.our_signal = Signal(file_name[:-4])
-
-        self.our_signal.data = data
-        self.our_signal.time = time
-        self.our_signal.sr = sample_rate
-        self.data_split(self.our_signal)
-
-        self.plot_temp(self.our_signal)
-        self.show_audio(self.our_signal)
-
-    def plot_temp(self, signal):
-
+    def plot_signal(self, signal):
         if signal:
             self.ui.graph1.clear()
-
-            # Create a plot item
             self.ui.graph1.setLabel('left', "Amplitude")
             self.ui.graph1.setLabel('bottom', "Time")
-
-            # Initialize the time axis (assuming all signals have the same time axis)
-            x_data = signal.time
-            y_data = signal.data
-
-            # Plot the mixed waveform
-            pen = pg.mkPen(color=(64, 92, 245), width=2)
-            plot_item = self.ui.graph1.plot(
-                x_data, y_data, name=signal.name, pen=pen)
+            plot_item = self.ui.graph1.plot(signal.time, signal.data, name=signal.name, pen=(64, 92, 245))
 
             # Check if there is already a legend and remove it
             if self.ui.graph1.plotItem.legend is not None:
@@ -277,76 +251,44 @@ class MainWindow(QtWidgets.QMainWindow):
             legend = self.ui.graph1.addLegend()
             legend.addItem(plot_item, name=signal.name)
 
-
-    def show_audio(self, signal):
-        audio, sample_rate = signal.data, signal.sr
-
-        # Create an Audio widget to play the audio
-        audio_widget = Audio(data=audio, rate=sample_rate)
-
-        # Create a layout for the "beforeWidget" if it doesn't have one
-        if not self.ui.beforeWidget.layout():
-            layout = QVBoxLayout()
-            self.ui.beforeWidget.setLayout(layout)
-        else:
-            layout = self.ui.beforeWidget.layout()
-
-        # Add the audio_widget to the layout of "beforeWidget"
+    def display_audio(self, signal):
+        audio_widget = QWidget()
+        layout = self.ui.beforeWidget.layout() or QVBoxLayout()
+        audio = signal.data
+        sample_rate = signal.sr
+        audio_widget.setLayout(layout)
+        audio_widget.layout().addWidget(Audio(data=audio, rate=sample_rate))
         layout.addWidget(audio_widget)
-
-        # Display the Audio widget
         display(audio_widget)
 
+    def split_data(self, signal):
+        num_slices = 10 if self.ui.modeList.currentIndex() == 0 else 4
+        data_length = len(signal.data)
+        slice_size = data_length // num_slices
+
+        signal.components = [signal.data[i * slice_size:(i + 1) * slice_size] for i in range(num_slices)]
 
     def add_sliders(self, num_sliders):
-        # Clear any existing sliders from the widget
-        for i in reversed(range(self.ui.slidersWidget.layout().count())):
-            self.ui.slidersWidget.layout().itemAt(i).widget().setParent(None)
-
-        # Create and add new sliders
+        layout = self.ui.slidersWidget.layout()
+        if layout:
+            for i in reversed(range(layout.count())):
+                layout.itemAt(i).widget().setParent(None)
         for _ in range(num_sliders):
-            slider = QSlider()
-            slider.setOrientation(Qt.Orientation.Vertical)  # Vertical orientation (1)
-            self.ui.slidersWidget.layout().addWidget(slider)
-
+            slider = QSlider(Qt.Orientation.Vertical)
+            layout.addWidget(slider)
 
     def handle_combobox_selection(self):
         current_index = self.ui.modeList.currentIndex()
-        if current_index == 0:
-            self.add_sliders(10)
-        else:
-            self.add_sliders(4)
-
-    def data_split(self, signal):
-        current_index = self.ui.modeList.currentIndex()
-        if current_index == 0:
-            num_slices = 10
-            data_length = len(signal.data)
-            slice_size = data_length // num_slices
-
-            for i in range(num_slices):
-                start = i * slice_size
-                end = start + slice_size
-                signal.add_component(signal.data[start:end])
-        else:
-            num_slices = 4
-            data_length = len(signal.data)
-            slice_size = data_length // num_slices
-
-            for i in range(num_slices):
-                start = i * slice_size
-                end = start + slice_size
-                signal.add_component(signal.data[start:end])
+        num_sliders = 10 if current_index == 0 else 4
+        self.add_sliders(num_sliders)
 
 
-# @lru_cache(maxsize=128)
 def main():
-    app = QtWidgets.QApplication(sys.argv)
+    app = QtWidgets.QApplication([])
     app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt6())
-    main = MainWindow()
-    main.show()
+    main_window = MainWindow()
+    main_window.show()
     sys.exit(app.exec())
-
 
 if __name__ == '__main__':
     main()
