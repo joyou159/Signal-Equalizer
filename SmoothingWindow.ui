@@ -129,7 +129,7 @@ background: rgba(74, 74, 74, 0);
          </layout>
         </item>
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0,0">
+         <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0">
           <property name="spacing">
            <number>6</number>
           </property>
@@ -237,9 +237,6 @@ QSpinBox::up-button:hover, QSpinBox::down-button:hover {
              </spacer>
             </item>
            </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout" stretch=""/>
           </item>
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_6">
