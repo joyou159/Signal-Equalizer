@@ -42,13 +42,13 @@ class MainWindow(QtWidgets.QMainWindow):
         return amplitude * signal.windows.boxcar(N)
 
     def hamming_window(self, N, amplitude):
-        return amplitude * signal.windows.hamming(N, sym=False)
+        return amplitude * signal.windows.hamming(N)
 
     def hanning_window(self, N, amplitude):
-        return amplitude * signal.windows.hann(N, sym=False)
+        return amplitude * signal.windows.hann(N)
 
     def gaussian_window(self, N, amplitude, std):
-        return amplitude * signal.windows.gaussian(N, std, sym=False)
+        return amplitude * signal.windows.gaussian(N, std)
 
     def show_error_message(self, message):
         msg_box = QMessageBox()
@@ -70,14 +70,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.new_window.functionList.addItem('Hamming')
             self.new_window.functionList.addItem('Hanning')
             self.new_window.functionList.addItem('Gaussian')
-            self.new_window.ampSpinBox.setValue(1)
             self.new_window.stdSpinBox.setValue(5)
-            self.new_window.samplesSpinBox.setValue(50)
+            self.new_window.stdSpinBox.setRange(0, 1000)
             self.new_window.functionList.setCurrentIndex(0)
             self.handle_selected_function()
 
-            self.new_window.ampSpinBox.valueChanged.connect(
-                self.handle_selected_function)
             self.new_window.stdSpinBox.valueChanged.connect(
                 self.handle_selected_function)
 
@@ -99,25 +96,22 @@ class MainWindow(QtWidgets.QMainWindow):
             self.new_window.stdSpinBox.hide()
             self.new_window.std.hide()
 
-        samples = int(self.new_window.samplesSpinBox.text())
-        amplitude = int(self.new_window.ampSpinBox.text())
-        std = int(self.new_window.stdSpinBox.text())
-        self.smooth_time = np.linspace(0, 1, 500, endpoint=False)
+        self.smoothing_real_time()
 
+    def custom_window(self, samples, amplitude, std):
         if self.selected_function == 'Rectangle':
-            self.smooth_data = self.rectangle_window(
+            smooth_data = self.rectangle_window(
                 amplitude, samples)
 
         elif self.selected_function == 'Hamming':
-            self.smooth_data = self.hamming_window(samples, amplitude)
+            smooth_data = self.hamming_window(samples, amplitude)
 
         elif self.selected_function == 'Hanning':
-            self.smooth_data = self.hanning_window(samples, amplitude)
+            smooth_data = self.hanning_window(samples, amplitude)
 
         elif self.selected_function == 'Gaussian':
-            self.smooth_data = self.gaussian_window(samples, amplitude, std)
-
-        self.smoothing_real_time()
+            smooth_data = self.gaussian_window(samples, amplitude, std)
+        return smooth_data
 
     def smoothing_real_time(self):
         self.new_window.smoothingGraph1.clear()
@@ -126,16 +120,26 @@ class MainWindow(QtWidgets.QMainWindow):
             self.our_signal.fft_data[0], self.our_signal.fft_data[1])
 
         for i in range(self.our_signal.frequency_range_splits.shape[1] + 1):
+            std = int(self.new_window.stdSpinBox.text())
+
             if i != 10:
                 pos = self.our_signal.frequency_range_splits[0][i]
+
+                current_segment_smooth_window = self.custom_window(
+                    len(self.our_signal.frequency_range_splits), max(self.our_signal.amplitude_splits[:, i]), std)
+
+                # Assuming self.new_window.smoothingGraph1 is a PlotItem
+                self.new_window.smoothingGraph1.plot(
+                    self.our_signal.frequency_range_splits[:, i],
+                    current_segment_smooth_window,
+                    pen={'color': 'b', 'width': 2}  # 'b' stands for blue color
+                )
+
             else:
                 pos = self.our_signal.frequency_range_splits[-1][i-1]
 
             v_line = pg.InfiniteLine(pos=pos, angle=90, movable=False)
             self.new_window.smoothingGraph1.addItem(v_line)
-
-            self.new_window.smoothingGraph1.plot(
-                self.our_signal.frequency_range_splits[:len(self.smooth_data)][i], self.smooth_data)
 
     def save(self):
         self.our_signal.smoothing_window_name = self.selected_function
