@@ -195,7 +195,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if filetype in ["wav", "mp3"]:
             data, sample_rate = librosa.load(path)
             duration = librosa.get_duration(y=data, sr=sample_rate)
-            print(len(data))
             time = np.linspace(0, duration, len(data))
 
         elif filetype == "csv":
@@ -208,20 +207,47 @@ class MainWindow(QtWidgets.QMainWindow):
         signal.data = data
         signal.time = time
         signal.sr = sample_rate
+        sample_interval = 1 / signal.sr
+        x , y   = self.get_fft_values(signal,sample_interval,len(signal.data) ) 
+        signal.fft_data = np.array([x,y])
+        
         self.process_signal(signal)
 
+
+    def get_fft_values(self,signal,T,N):
+        
+        f_values = np.linspace(0.0,1.0/(2.0*T),N//2) 
+        # we have considered half of the sampled data points due to symmetry nature of FFT    
+        fft_values = np.fft.fft(signal.data,N) # complex coefficients of fft 
+        fft_values = (2/N) * np.abs(fft_values[:N//2])
+        return f_values,fft_values
+        
+    # def freq_comp(self, signal, sample_rate):
+    #     fft_result = fft(signal.data)
+    #     # Calculate the frequencies corresponding to the FFT result
+    #     frequencies = np.fft.fftfreq(len(fft_result), 1 / sample_rate)
+    #     return frequencies, fft_result
+    
     def process_signal(self, signal):
-        self.plot_signal(signal)
-        self.display_audio(signal)
+        # self.display_audio(signal)
         self.split_data(signal)
+        self.plot_signal(signal)
 
     def plot_signal(self, signal):
         if signal:
             self.ui.graph1.clear()
             self.ui.graph1.setLabel('left', "Amplitude")
             self.ui.graph1.setLabel('bottom', "Time")
+
+            # Accumulate data for all columns
+            x_values, y_values = [], []
+            for i in range(signal.frequency_range_splits.shape[1]):
+                x_values.extend(signal.frequency_range_splits[:, i])
+                y_values.extend(signal.amplitude_splits[:, i])
+
+            # Plot all columns together
             plot_item = self.ui.graph1.plot(
-                signal.time, signal.data, name=signal.name, pen=(64, 92, 245))
+                x_values, y_values, name=f"{signal.name}", pen=(64, 92, 245))
 
             # Check if there is already a legend and remove it
             if self.ui.graph1.plotItem.legend is not None:
@@ -229,7 +255,35 @@ class MainWindow(QtWidgets.QMainWindow):
 
             # Add a legend to the plot
             legend = self.ui.graph1.addLegend()
-            legend.addItem(plot_item, name=signal.name)
+            legend.addItem(plot_item, name=f"{signal.name}")
+
+
+
+    def split_data(self, signal):
+        num_slices = 10 if self.ui.modeList.currentIndex() == 0 else 4
+        x = signal.fft_data[0]
+        y = signal.fft_data[1]
+        x_slices = np.array_split(x, num_slices)
+        y_slices = np.array_split(y, num_slices)
+        print(len(x_slices))
+        # Trim the values to make sure all columns have the same size
+        min_length = min(len(slice_) for slice_ in x_slices)
+        x_slices = [slice_[:min_length] for slice_ in x_slices]
+        y_slices = [slice_[:min_length] for slice_ in y_slices]
+        
+        # Convert lists of arrays to 2D arrays
+        signal.frequency_range_splits = np.array(x_slices).T  # Transpose to have columns
+        signal.amplitude_splits = np.array(y_slices).T
+        print(signal.amplitude_splits.shape)
+
+        # print(amplitude_splits)
+
+        # # Convert the splits to NumPy arrays
+        # signal.frequency_range_splits = [np.array(split) for split in frequency_range_splits]
+        # signal.amplitude_split = [np.array(split) for split in amplitude_splits]
+
+
+
 
     def display_audio(self, signal):
         audio_widget = QWidget()
@@ -241,13 +295,7 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(audio_widget)
         display(audio_widget)
 
-    def split_data(self, signal):
-        num_slices = 10 if self.ui.modeList.currentIndex() == 0 else 4
-        data_length = len(signal.data)
-        slice_size = data_length // num_slices
 
-        signal.components = [
-            signal.data[i * slice_size:(i + 1) * slice_size] for i in range(num_slices)]
 
     def add_sliders(self, num_sliders):
         layout = self.ui.slidersWidget.layout()
