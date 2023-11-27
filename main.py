@@ -1,5 +1,5 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton, QSlider
+from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton, QSlider
 from PyQt6.QtCore import Qt, QTimer
 import numpy as np
 import pandas as pd
@@ -50,33 +50,44 @@ class MainWindow(QtWidgets.QMainWindow):
     def gaussian_window(self, N, amplitude, std):
         return amplitude * signal.windows.gaussian(N, std, sym=False)
 
+    def show_error_message(self, message):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Icon.Critical)
+        msg_box.setWindowTitle("Error")
+        msg_box.setText(message)
+        msg_box.exec()
+
     def openNewWindow(self):
-        self.setEnabled(False)
+        if self.our_signal == None:
+            self.show_error_message("Please select a signal first!")
 
-        self.new_window = QtWidgets.QMainWindow()
-        uic.loadUi('SmoothingWindow.ui', self.new_window)
-        self.new_window.functionList.addItem('Rectangle')
-        self.new_window.functionList.addItem('Hamming')
-        self.new_window.functionList.addItem('Hanning')
-        self.new_window.functionList.addItem('Gaussian')
-        self.new_window.ampSpinBox.setValue(1)
-        self.new_window.stdSpinBox.setValue(1)
-        self.new_window.samplesSpinBox.setValue(1)
-        self.new_window.functionList.setCurrentIndex(0)
-        self.handle_selected_function()
+        else:
+            self.setEnabled(False)
 
-        self.new_window.ampSpinBox.valueChanged.connect(
-            self.handle_selected_function)
-        self.new_window.stdSpinBox.valueChanged.connect(
-            self.handle_selected_function)
+            self.new_window = QtWidgets.QMainWindow()
+            uic.loadUi('SmoothingWindow.ui', self.new_window)
+            self.new_window.functionList.addItem('Rectangle')
+            self.new_window.functionList.addItem('Hamming')
+            self.new_window.functionList.addItem('Hanning')
+            self.new_window.functionList.addItem('Gaussian')
+            self.new_window.ampSpinBox.setValue(1)
+            self.new_window.stdSpinBox.setValue(5)
+            self.new_window.samplesSpinBox.setValue(50)
+            self.new_window.functionList.setCurrentIndex(0)
+            self.handle_selected_function()
 
-        self.new_window.functionList.currentIndexChanged.connect(
-            self.handle_selected_function)
+            self.new_window.ampSpinBox.valueChanged.connect(
+                self.handle_selected_function)
+            self.new_window.stdSpinBox.valueChanged.connect(
+                self.handle_selected_function)
 
-        self.new_window.save.clicked.connect(self.save)
+            self.new_window.functionList.currentIndexChanged.connect(
+                self.handle_selected_function)
 
-        self.new_window.show()
-        self.new_window.destroyed.connect(self.onNewWindowClosed)
+            self.new_window.save.clicked.connect(self.save)
+
+            self.new_window.show()
+            self.new_window.destroyed.connect(self.onNewWindowClosed)
 
     def handle_selected_function(self):
         self.selected_function = self.new_window.functionList.currentText()
@@ -106,20 +117,28 @@ class MainWindow(QtWidgets.QMainWindow):
         elif self.selected_function == 'Gaussian':
             self.smooth_data = self.gaussian_window(samples, amplitude, std)
 
-        A = fft(self.smooth_data, 2048) / (len(self.smooth_data)/2.0)
-        self.freq = np.linspace(-0.5, 0.5, len(A))
-        self.response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-
         self.smoothing_real_time()
 
     def smoothing_real_time(self):
         self.new_window.smoothingGraph1.clear()
 
         self.new_window.smoothingGraph1.plot(
-            self.smooth_data)
+            self.our_signal.fft_data[0], self.our_signal.fft_data[1])
+
+        for i in range(self.our_signal.frequency_range_splits.shape[1] + 1):
+            if i != 10:
+                pos = self.our_signal.frequency_range_splits[0][i]
+            else:
+                pos = self.our_signal.frequency_range_splits[-1][i-1]
+
+            v_line = pg.InfiniteLine(pos=pos, angle=90, movable=False)
+            self.new_window.smoothingGraph1.addItem(v_line)
+
+            self.new_window.smoothingGraph1.plot(
+                self.our_signal.frequency_range_splits[:len(self.smooth_data)][i], self.smooth_data)
 
     def save(self):
-        self.our_signal.smoothing_window = self.selected_function
+        self.our_signal.smoothing_window_name = self.selected_function
         self.our_signal.smoothing_window_data = self.smooth_data
         self.onNewWindowClosed()
 
@@ -208,26 +227,27 @@ class MainWindow(QtWidgets.QMainWindow):
         signal.time = time
         signal.sr = sample_rate
         sample_interval = 1 / signal.sr
-        x , y   = self.get_fft_values(signal,sample_interval,len(signal.data) ) 
-        signal.fft_data = np.array([x,y])
-        
+        x, y = self.get_fft_values(signal, sample_interval, len(signal.data))
+        signal.fft_data = np.array([x, y])
+
         self.process_signal(signal)
 
+        self.our_signal = signal
 
-    def get_fft_values(self,signal,T,N):
-        
-        f_values = np.linspace(0.0,1.0/(2.0*T),N//2) 
-        # we have considered half of the sampled data points due to symmetry nature of FFT    
-        fft_values = np.fft.fft(signal.data,N) # complex coefficients of fft 
+    def get_fft_values(self, signal, T, N):
+
+        f_values = np.linspace(0.0, 1.0/(2.0*T), N//2)
+        # we have considered half of the sampled data points due to symmetry nature of FFT
+        fft_values = np.fft.fft(signal.data, N)  # complex coefficients of fft
         fft_values = (2/N) * np.abs(fft_values[:N//2])
-        return f_values,fft_values
-        
+        return f_values, fft_values
+
     # def freq_comp(self, signal, sample_rate):
     #     fft_result = fft(signal.data)
     #     # Calculate the frequencies corresponding to the FFT result
     #     frequencies = np.fft.fftfreq(len(fft_result), 1 / sample_rate)
     #     return frequencies, fft_result
-    
+
     def process_signal(self, signal):
         # self.display_audio(signal)
         self.split_data(signal)
@@ -257,33 +277,24 @@ class MainWindow(QtWidgets.QMainWindow):
             legend = self.ui.graph1.addLegend()
             legend.addItem(plot_item, name=f"{signal.name}")
 
-
-
     def split_data(self, signal):
         num_slices = 10 if self.ui.modeList.currentIndex() == 0 else 4
         x = signal.fft_data[0]
         y = signal.fft_data[1]
         x_slices = np.array_split(x, num_slices)
         y_slices = np.array_split(y, num_slices)
-        print(len(x_slices))
+
         # Trim the values to make sure all columns have the same size
         min_length = min(len(slice_) for slice_ in x_slices)
         x_slices = [slice_[:min_length] for slice_ in x_slices]
         y_slices = [slice_[:min_length] for slice_ in y_slices]
-        
+
         # Convert lists of arrays to 2D arrays
-        signal.frequency_range_splits = np.array(x_slices).T  # Transpose to have columns
+        signal.frequency_range_splits = np.array(
+            x_slices).T  # Transpose to have columns
         signal.amplitude_splits = np.array(y_slices).T
-        print(signal.amplitude_splits.shape)
 
-        # print(amplitude_splits)
-
-        # # Convert the splits to NumPy arrays
-        # signal.frequency_range_splits = [np.array(split) for split in frequency_range_splits]
-        # signal.amplitude_split = [np.array(split) for split in amplitude_splits]
-
-
-
+        print(signal.frequency_range_splits.shape)
 
     def display_audio(self, signal):
         audio_widget = QWidget()
@@ -294,8 +305,6 @@ class MainWindow(QtWidgets.QMainWindow):
         audio_widget.layout().addWidget(Audio(data=audio, rate=sample_rate))
         layout.addWidget(audio_widget)
         display(audio_widget)
-
-
 
     def add_sliders(self, num_sliders):
         layout = self.ui.slidersWidget.layout()
