@@ -15,6 +15,7 @@ from scipy import signal
 from scipy.fft import fft, fftshift
 import librosa
 from IPython.display import display, Audio
+import bisect
 
 # pyinstrument
 # pip install pyqtgraph pydub
@@ -33,7 +34,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.smooth_time = []
         self.smooth_data = []
         self.our_signal = None
-
+        self.activation = None
         # self.timer = QTimer(self)
         # self.timer.timeout.connect(self.update_plot)
         # self.timer.start(1000)  # Update plot every 1 second (adjust this as needed)
@@ -85,7 +86,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.new_window.show()
             self.new_window.destroyed.connect(self.onNewWindowClosed)
-
+            
+    def handle_selected_mode(self):
+        mode = self.ui.modeList.currentIndex()
+        if mode == 0 :
+            self.activation = 'uniform'
+        elif mode == 1:
+            self.activation = 'music'
+        elif mode ==2:
+            self.activation = 'animal'
+        else:
+            self.activation = 'ecg'
+            
     def handle_selected_function(self):
         self.selected_function = self.new_window.functionList.currentText()
 
@@ -114,31 +126,28 @@ class MainWindow(QtWidgets.QMainWindow):
         return smooth_data
 
     def smoothing_real_time(self):
+        first_item ,last_item = self.our_signal.slice_indices[-1]
         self.new_window.smoothingGraph1.clear()
-
         self.new_window.smoothingGraph1.plot(
-            self.our_signal.fft_data[0], self.our_signal.fft_data[1])
-
-        for i in range(self.our_signal.frequency_range_splits.shape[1] + 1):
+            self.our_signal.fft_data[0][:last_item], self.our_signal.fft_data[1][:last_item])
+        for i in range(len(self.our_signal.slice_indices)):
             std = int(self.new_window.stdSpinBox.text())
-
-            if i != 10:
-                pos = self.our_signal.frequency_range_splits[0][i]
-
+            if i != len(self.our_signal.slice_indices) - 1:
+                start, end = self.our_signal.slice_indices[i]
+                pos = self.our_signal.fft_data[0][start]
                 current_segment_smooth_window = self.custom_window(
-                    len(self.our_signal.frequency_range_splits), max(self.our_signal.amplitude_splits[:, i]), std)
+                    len(self.our_signal.fft_data[0][start:end]), max(self.our_signal.fft_data[1][start:end]), std)
+                self.our_signal.smooth_seg.append(current_segment_smooth_window)
 
                 # Assuming self.new_window.smoothingGraph1 is a PlotItem
                 self.new_window.smoothingGraph1.plot(
-                    self.our_signal.frequency_range_splits[:, i],
+                    self.our_signal.fft_data[0][start:end],
                     current_segment_smooth_window,
                     pen={'color': 'b', 'width': 2}  # 'b' stands for blue color
                 )
-
             else:
-                pos = self.our_signal.frequency_range_splits[-1][i-1]
-
-            v_line = pg.InfiniteLine(pos=pos, angle=90, movable=False)
+                pos = self.our_signal.fft_data[0][last_item-1]
+            v_line = pg.InfiniteLine(pos = pos, angle=90, movable=False)
             self.new_window.smoothingGraph1.addItem(v_line)
 
     def save(self):
@@ -226,23 +235,22 @@ class MainWindow(QtWidgets.QMainWindow):
             time = data_reader.iloc[:, 0].astype(float).tolist()
             data = data_reader.iloc[:, 1].astype(float).tolist()
 
-        signal = Signal(file_name[:-4])
-        signal.data = data
-        signal.time = time
-        signal.sr = sample_rate
-        sample_interval = 1 / signal.sr
-        x, y = self.get_fft_values(signal, sample_interval, len(signal.data))
-        signal.fft_data = np.array([x, y])
+        self.our_signal = Signal(file_name[:-4])
+        self.our_signal.data = data
+        self.our_signal.time = time
+        self.our_signal.sr = sample_rate
+        sample_interval = 1 / self.our_signal.sr
+        x, y = self.get_fft_values(sample_interval, len(self.our_signal.data))
+        self.our_signal.fft_data = [x, y]
+        
+        
+        self.process_signal()
 
-        self.process_signal(signal)
-
-        self.our_signal = signal
-
-    def get_fft_values(self, signal, T, N):
+    def get_fft_values(self, T, N):
 
         f_values = np.linspace(0.0, 1.0/(2.0*T), N//2)
         # we have considered half of the sampled data points due to symmetry nature of FFT
-        fft_values = np.fft.fft(signal.data, N)  # complex coefficients of fft
+        fft_values = np.fft.fft(self.our_signal.data, N)  # complex coefficients of fft
         fft_values = (2/N) * np.abs(fft_values[:N//2])
         return f_values, fft_values
 
@@ -252,26 +260,19 @@ class MainWindow(QtWidgets.QMainWindow):
     #     frequencies = np.fft.fftfreq(len(fft_result), 1 / sample_rate)
     #     return frequencies, fft_result
 
-    def process_signal(self, signal):
+    def process_signal(self):
         # self.display_audio(signal)
-        self.split_data(signal)
-        self.plot_signal(signal)
+        self.handle_selected_mode()
+        self.split_data()
+        self.plot_signal()
 
-    def plot_signal(self, signal):
-        if signal:
+    def plot_signal(self):
+        if self.our_signal:
             self.ui.graph1.clear()
             self.ui.graph1.setLabel('left', "Amplitude")
             self.ui.graph1.setLabel('bottom', "Time")
-
-            # Accumulate data for all columns
-            x_values, y_values = [], []
-            for i in range(signal.frequency_range_splits.shape[1]):
-                x_values.extend(signal.frequency_range_splits[:, i])
-                y_values.extend(signal.amplitude_splits[:, i])
-
-            # Plot all columns together
             plot_item = self.ui.graph1.plot(
-                x_values, y_values, name=f"{signal.name}", pen=(64, 92, 245))
+                self.our_signal.time, self.our_signal.data, name=f"{self.our_signal.name}", pen=(64, 92, 245))
 
             # Check if there is already a legend and remove it
             if self.ui.graph1.plotItem.legend is not None:
@@ -279,32 +280,71 @@ class MainWindow(QtWidgets.QMainWindow):
 
             # Add a legend to the plot
             legend = self.ui.graph1.addLegend()
-            legend.addItem(plot_item, name=f"{signal.name}")
+            legend.addItem(plot_item, name=f"{self.our_signal.name}")
+            
+    # searching , dont forget it
+    def find_closest_index(self,array, target):
+        """Find the index of the closest value in the array to the target."""
+        index = bisect.bisect_left(array, target)
+        if index == 0:
+            return 0
+        if index == len(array):
+            return len(array) - 1
+        before = array[index - 1]
+        after = array[index]
+        if after - target < target - before:
+            return index
+        else:
+            return index - 1
 
-    def split_data(self, signal):
-        num_slices = 10 if self.ui.modeList.currentIndex() == 0 else 4
-        x = signal.fft_data[0]
-        y = signal.fft_data[1]
-        x_slices = np.array_split(x, num_slices)
-        y_slices = np.array_split(y, num_slices)
 
-        # Trim the values to make sure all columns have the same size
-        min_length = min(len(slice_) for slice_ in x_slices)
-        x_slices = [slice_[:min_length] for slice_ in x_slices]
-        y_slices = [slice_[:min_length] for slice_ in y_slices]
+    def split_data(self ):
+        # round the frequencies 
+        self.our_signal.fft_data[0] = [round(self.our_signal.fft_data[0][i])for i in range (len(self.our_signal.fft_data[0]))]
+        if self.activation == 'uniform':
+            num_slices = 10 
+            excess_elements = len(self.our_signal.fft_data[0]) % num_slices
+            if excess_elements:
+                self.our_signal.data = self.our_signal.data[:-excess_elements]
+                self.our_signal.time = self.our_signal.time[:-excess_elements]
+                self.our_signal.fft_data[0] =self.our_signal.fft_data[0][:-excess_elements]
+                self.our_signal.fft_data[1] =self.our_signal.fft_data[1][:-excess_elements] 
+            slice_size = int(len(self.our_signal.fft_data[0])/num_slices)  
+            self.our_signal.slice_indices = [(i * slice_size, (i + 1) * slice_size) for i in range(num_slices)]
+            
+        elif self.activation == 'music':
+            # ranges = [(0, 100), (150, 600), (600, 800), (800, 1200)]
+            # # Iterate over each frequency range
+            # for start, end in ranges:
+                
+            #     indices = [freq for  freq in self.our_signal.fft_data[0] if start <= freq <= end]
+            #     self.our_signal.slice_indices.append((indices[0] if indices else None, indices[-1] if indices else None))
+            # allowance_percent = 0.1  # 10% allowance
 
-        # Convert lists of arrays to 2D arrays
-        signal.frequency_range_splits = np.array(
-            x_slices).T  # Transpose to have columns
-        signal.amplitude_splits = np.array(y_slices).T
+            ranges = [(0, 150), (150, 600), (600, 800), (800, 1200)]
 
-        print(signal.frequency_range_splits.shape)
+            # Assuming self.our_signal.fft_data[0] contains the frequency values
+            frequencies = self.our_signal.fft_data[0]
+            for start, end in ranges:
+                start_index = self.find_closest_index(frequencies, start)
+                end_index = self.find_closest_index(frequencies, end)
+                self.our_signal.slice_indices.append((start_index, end_index))
+                
+        elif self.activation == 'animal':
+            ranges = [(400, 420), (600, 700), (1300, 1600), (3000,4000)]
 
-    def display_audio(self, signal):
+            # Assuming self.our_signal.fft_data[0] contains the frequency values
+            frequencies = self.our_signal.fft_data[0]
+            for start, end in ranges:
+                start_index = self.find_closest_index(frequencies, start)
+                end_index = self.find_closest_index(frequencies, end)
+                self.our_signal.slice_indices.append((start_index, end_index))
+
+    def display_audio(self):
         audio_widget = QWidget()
         layout = self.ui.beforeWidget.layout() or QVBoxLayout()
-        audio = signal.data
-        sample_rate = signal.sr
+        audio = self.our_signal.data
+        sample_rate = self.our_signal.sr
         audio_widget.setLayout(layout)
         audio_widget.layout().addWidget(Audio(data=audio, rate=sample_rate))
         layout.addWidget(audio_widget)

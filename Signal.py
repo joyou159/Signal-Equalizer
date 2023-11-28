@@ -11,7 +11,9 @@ class Signal:
         self.smoothing_window_name = None
         self.smoothing_window_data = None
         self.fft_data = None
-        self.frequency_range_splits = None
-        self.amplitude_splits = None
+        self.slice_indices = []
+        
+        self.smooth_seg = []
+        
     def add_component(self, component):
         self.components.append(component)
