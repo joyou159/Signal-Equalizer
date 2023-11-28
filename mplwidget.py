@@ -10,7 +10,13 @@ class MplWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.canvas = FigureCanvas(Figure())
-        self.canvas.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
+        self.canvas.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
+
+        # Set background color with alpha (transparency)
+        # RGBA: 0, 0, 0 (black), 0 (transparent)
+        # self.canvas.figure.patch.set_facecolor((0, 0, 0, 0))
+
         vertical_layout = QVBoxLayout()
         vertical_layout.addWidget(self.canvas)
         self.canvas.axes = self.canvas.figure.add_subplot(111)
@@ -27,11 +33,11 @@ class MplWidget(QWidget):
 
     def plot_spectrogram(self, audio_data, sample_rate, title='Spectrogram', x_label='Time', y_label='Frequency'):
         self.canvas.axes.clear()
-        spectrogram = librosa.amplitude_to_db(np.abs(librosa.stft(audio_data)), ref=np.max)
-        librosa.display.specshow(spectrogram, sr=sample_rate, x_axis='time', y_axis='log', ax=self.canvas.axes)
+        spectrogram = librosa.amplitude_to_db(
+            np.abs(librosa.stft(audio_data)), ref=np.max)
+        librosa.display.specshow(
+            spectrogram, sr=sample_rate, x_axis='time', y_axis='log', ax=self.canvas.axes)
         self.canvas.axes.set_title(title)
         self.canvas.axes.set_xlabel(x_label)
         self.canvas.axes.set_ylabel(y_label)
         self.canvas.draw()
-
-

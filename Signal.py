@@ -1,19 +1,20 @@
 class Signal:
     def __init__(self, name):
         self.name = name
-        self.freq_components = []
         self.data = []
         self.time = []
         self.sr = None
-        
-        self.maxFreq = None
-        self.components = []
+
+        # mag and phase
+        self.phase = None
+
         self.smoothing_window_name = None
-        self.smoothing_window_data = None
+
+        # list of 2 lists freq, mag
         self.fft_data = None
+        
+        # list of tubles each one (start,end)
         self.slice_indices = []
-        
+
         self.smooth_seg = []
-        
-    def add_component(self, component):
-        self.components.append(component)
+        self.smooth_seg_amp = []
