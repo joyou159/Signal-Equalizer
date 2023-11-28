@@ -1,6 +1,7 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton, QSlider
 from PyQt6.QtCore import Qt ,QTimer
+from PyQt6.QtGui import  QIcon
 import numpy as np
 import pandas as pd
 import sys
@@ -8,13 +9,16 @@ from PyQt6 import QtWidgets, uic
 import pyqtgraph as pg
 import qdarkstyle
 import os
-from pydub import AudioSegment
-import math
 from Signal import Signal
 from scipy import signal
 from scipy.fft import fft, fftshift
 import librosa
-from IPython.display import display, Audio
+from IPython.display import display, Audio as IPyAudio
+import matplotlib
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from mplwidget import MplWidget
+
+matplotlib.use("QtAgg")
 
 # pyinstrument 
 # pip install pyqtgraph pydub
@@ -22,6 +26,7 @@ from IPython.display import display, Audio
 # https://www.geeksforgeeks.org/how-to-install-ffmpeg-on-windows/
 # setx PATH "C:\ffmpeg\bin;%PATH%"
 # restart
+
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -34,9 +39,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.smooth_data = []
         self.our_signal = None
 
-        # self.timer = QTimer(self)
-        # self.timer.timeout.connect(self.update_plot)
-        # self.timer.start(1000)  # Update plot every 1 second (adjust this as needed)
 
     def rectangle_window(self, amplitude, freq, t):
         return amplitude * signal.square(2 * np.pi * freq * t)
@@ -151,8 +153,29 @@ class MainWindow(QtWidgets.QMainWindow):
     def init_ui(self):
         # Load the UI Page
         self.ui = uic.loadUi('Mainwindow.ui', self)
+        
         self.setWindowTitle("Signal Equlizer")
-        self.graph_style_ui()
+        self.graph_load_ui()
+
+        # Other Attributes
+        self.speed = 50
+        self.end_ind = 50
+        self.timer = QTimer()
+        self.timer.setInterval(50)
+        self.timer.timeout.connect(lambda: self.updating_graphs(self.signal))
+
+        self.ui.playPause.clicked.connect(self.play_pause)
+        self.ui.zoomIn.clicked.connect(self.zoom_in)
+        self.ui.zoomOut.clicked.connect(self.zoom_out)
+        self.ui.resetButton.clicked.connect(self.reset)
+
+        # Set speed slider properties
+        self.speedSlider.setMinimum(0)
+        self.speedSlider.setMaximum(200)
+        self.speedSlider.setSingleStep(5)
+        self.speedSlider.setValue(self.speed)
+        self.speedSlider.valueChanged.connect(self.change_speed)
+
 
         self.ui.smoothingWindow.clicked.connect(self.openNewWindow)
         self.ui.browseFile.clicked.connect(self.browse)
@@ -162,16 +185,31 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.modeList.currentIndexChanged.connect(
             self.handle_combobox_selection)
+        
         self.ui.spectogramCheck.stateChanged.connect(self.show_spectrogram)
 
-    def graph_style_ui(self):
+    def set_icon(self, icon_path):
+        # Load an icon
+        icon = QIcon(icon_path)
+        # Set the icon for the button
+        self.playPause.setIcon(icon)
+
+    def graph_load_ui(self):
+
+        # Create an instance of MplWidget for spectrogram
+        self.spectrogram_widget1 = MplWidget()
+        self.spectrogram_widget2 = MplWidget()
+
+        # Create a QVBoxLayout for the QWidget
+        spectrogram_layout1 = QVBoxLayout(self.ui.spectogram1)
+        spectrogram_layout1.addWidget(self.spectrogram_widget1)
+
+        spectrogram_layout2 = QVBoxLayout(self.ui.spectogram2)
+        spectrogram_layout2.addWidget(self.spectrogram_widget2)
+
         # Set the background of graph1 and graph2 to transparent
         self.ui.graph1.setBackground("transparent")
         self.ui.graph2.setBackground("transparent")
-
-        # Set the background of spectogram1 and spectogram2 to transparent
-        self.ui.spectogram1.setBackground("transparent")
-        self.ui.spectogram2.setBackground("transparent")
 
         # Add items to the modeList widget
         self.ui.modeList.addItem("Uniform Range")
@@ -205,6 +243,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if file_path:
             file_name = os.path.basename(file_path)
             self.open_file(file_path, file_name)
+            
 
     def open_file(self, path: str, file_name: str):
         data = []
@@ -217,7 +256,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if filetype in ["wav", "mp3"]:
             data, sample_rate = librosa.load(path)
             duration = librosa.get_duration(y=data, sr=sample_rate)
-            print(len(data))
             time = np.linspace(0, duration, len(data))
 
         elif filetype == "csv":
@@ -225,23 +263,30 @@ class MainWindow(QtWidgets.QMainWindow):
             time = data_reader.iloc[:, 0].astype(float).tolist()  
             data = data_reader.iloc[:, 1].astype(float).tolist()  
 
-        signal = Signal(file_name[:-4])
-        signal.data = data
-        signal.time = time
-        signal.sr = sample_rate
-        self.process_signal(signal)
+        self.signal = Signal(file_name[:-4])
+        self.signal.data = data
+        self.signal.time = time
+        self.signal.sr = sample_rate
+        self.data_x = []
+        self.data_y = []
+        self.process_signal(self.signal)
+
 
     def process_signal(self, signal):
         self.plot_signal(signal)
-        self.display_audio(signal)
+        self.plot_spectrogram(signal)
+        # self.display_audio(signal)
         self.split_data(signal)
+
 
     def plot_signal(self, signal):
         if signal:
             self.ui.graph1.clear()
             self.ui.graph1.setLabel('left', "Amplitude")
             self.ui.graph1.setLabel('bottom', "Time")
-            plot_item = self.ui.graph1.plot(signal.time, signal.data, name=signal.name, pen=(64, 92, 245))
+            self.data_x = signal.time[:self.end_ind]
+            self.data_y = signal.data[:self.end_ind]
+            self.plot_item = self.ui.graph1.plot(self.data_x, self.data_y, name=signal.name, pen=(64, 92, 245))
 
             # Check if there is already a legend and remove it
             if self.ui.graph1.plotItem.legend is not None:
@@ -249,17 +294,71 @@ class MainWindow(QtWidgets.QMainWindow):
 
             # Add a legend to the plot
             legend = self.ui.graph1.addLegend()
-            legend.addItem(plot_item, name=signal.name)
+            legend.addItem(self.plot_item, name=signal.name)
+            self.set_icon("icons/pause-square.png")
+            self.ui.playPause.setText("Pause")
+        
+        if not self.timer.isActive():
+            self.timer.start(50)
 
-    def display_audio(self, signal):
-        audio_widget = QWidget()
-        layout = self.ui.beforeWidget.layout() or QVBoxLayout()
-        audio = signal.data
-        sample_rate = signal.sr
-        audio_widget.setLayout(layout)
-        audio_widget.layout().addWidget(Audio(data=audio, rate=sample_rate))
-        layout.addWidget(audio_widget)
-        display(audio_widget)
+
+    def updating_graphs(self, signal):
+            data , time = signal.data, signal.time
+
+            data_X = time[:self.end_ind  + self.speed]
+            data_Y = data[:self.end_ind  + self.speed]
+            self.end_ind += self.speed
+
+            if (data_X[-1] < 1):
+                self.ui.graph1.setXRange(0 , 1)
+            else:
+                self.ui.graph1.setXRange(data_X[-1] - 1, data_X[-1])
+
+            self.plot_item.setData(data_X, data_Y, visible=True)
+            # self.ui.graph1.setLimits(
+            #     xMin=0, xMax=self.end_ind, yMin=y_min-0.3, yMax=y_max+0.3)
+            # self.ui.graph1.autoRange()
+
+
+    def play_pause(self):
+            if self.timer.isActive():
+                self.timer.stop()
+                self.set_icon("icons/play-square-svgrepo-com.png")
+                self.ui.playPause.setText("Play")
+            else:
+                self.set_icon("icons/pause-square.png")
+                self.ui.playPause.setText("Pause")
+                self.timer.start()
+
+    def zoom_in(self):
+            view_box = self.graph1.plotItem.getViewBox()
+            view_box.scaleBy((0.5, 1))
+
+    def zoom_out(self):
+            view_box = self.graph1.plotItem.getViewBox()
+            view_box.scaleBy((1.5, 1))
+
+    def change_speed(self):
+        self.speed = self.speedSlider.value()
+
+    def reset(self):
+        msg_box = QMessageBox()
+
+        msg_box.setText("Do you want to clear the graph?")
+        msg_box.setWindowTitle("Clear Graph")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+
+        result = msg_box.exec()
+
+        if result == QMessageBox.StandardButton.Ok:
+            self.ui.graph1.clear()
+
+
+    def plot_spectrogram(self, signal):
+        if signal:
+            self.spectrogram_widget1.plot_spectrogram(
+                signal.data, signal.sr, title='Spectrogram', x_label='Time', y_label='Frequency')
+
 
     def split_data(self, signal):
         num_slices = 10 if self.ui.modeList.currentIndex() == 0 else 4
