@@ -400,7 +400,7 @@ margin-top: 10px;</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_3">
          <item row="0" column="0">
-          <layout class="QVBoxLayout" name="mainbody" stretch="3,1">
+          <layout class="QVBoxLayout" name="mainbody" stretch="4,1">
            <property name="spacing">
             <number>6</number>
            </property>
@@ -411,7 +411,7 @@ margin-top: 10px;</string>
             <number>10</number>
            </property>
            <item>
-            <layout class="QVBoxLayout" name="verticalGraphs" stretch="2,0,2">
+            <layout class="QVBoxLayout" name="verticalGraphs" stretch="2,0,1">
              <property name="spacing">
               <number>20</number>
              </property>
@@ -490,7 +490,7 @@ transition: all .2s,box-shadow .08s ease-in;
 user-select: none;
 -webkit-user-select: none;
 touch-action: manipulation;
-width: 70px; /* Reduced width to 200 pixels */
+width: 25px; /* Reduced width to 200 pixels */
 }
 QPushButton:hover{
 background-color: #283999;
@@ -500,7 +500,7 @@ background-color: #1c2973;
 }</string>
                    </property>
                    <property name="text">
-                    <string>Zoom </string>
+                    <string/>
                    </property>
                    <property name="icon">
                     <iconset>
@@ -549,7 +549,7 @@ transition: all .2s,box-shadow .08s ease-in;
 user-select: none;
 -webkit-user-select: none;
 touch-action: manipulation;
-width: 70px; /* Reduced width to 200 pixels */
+width: 80px; /* Reduced width to 200 pixels */
 }
 QPushButton:hover{
 background-color: #283999;
@@ -608,7 +608,7 @@ transition: all .2s,box-shadow .08s ease-in;
 user-select: none;
 -webkit-user-select: none;
 touch-action: manipulation;
-width: 70px; /* Reduced width to 200 pixels */
+width: 25px; /* Reduced width to 200 pixels */
 }
 QPushButton:hover{
 background-color: #283999;
@@ -618,7 +618,7 @@ background-color: #1c2973;
 }</string>
                    </property>
                    <property name="text">
-                    <string>Zoom </string>
+                    <string/>
                    </property>
                    <property name="icon">
                     <iconset>
@@ -633,7 +633,7 @@ background-color: #1c2973;
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="reset">
+                  <widget class="QPushButton" name="resetButton">
                    <property name="font">
                     <font>
                      <family>-apple-system</family>
@@ -786,7 +786,7 @@ border: 1px solid #3498db; /* Border of the handle when pressed */
              <item>
               <layout class="QHBoxLayout" name="spectrogramLayout">
                <item>
-                <widget class="PlotWidget" name="spectogram1" native="true">
+                <widget class="QWidget" name="spectogram1" native="true">
                  <property name="styleSheet">
                   <string notr="true">border-radius: 6px;
 background: rgba(74, 74, 74, 0);</string>
@@ -794,7 +794,7 @@ background: rgba(74, 74, 74, 0);</string>
                 </widget>
                </item>
                <item>
-                <widget class="PlotWidget" name="spectogram2" native="true">
+                <widget class="QWidget" name="spectogram2" native="true">
                  <property name="styleSheet">
                   <string notr="true">border-radius: 6px;
 background: rgba(74, 74, 74, 0);</string>
@@ -808,7 +808,8 @@ background: rgba(74, 74, 74, 0);</string>
            <item>
             <widget class="QWidget" name="slidersWidget" native="true">
              <property name="styleSheet">
-              <string notr="true">background: rgba(74, 74, 74, 0);</string>
+              <string notr="true">background: rgba(74, 74, 74, 0);
+</string>
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_5">
               <property name="spacing">

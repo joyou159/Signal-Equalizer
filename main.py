@@ -1,6 +1,7 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton, QSlider
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton, QSlider
+from PyQt6.QtCore import Qt ,QTimer
+from PyQt6.QtGui import  QIcon
 import numpy as np
 import pandas as pd
 import sys
@@ -8,13 +9,16 @@ from PyQt6 import QtWidgets, uic
 import pyqtgraph as pg
 import qdarkstyle
 import os
-from pydub import AudioSegment
-import math
 from Signal import Signal
 from scipy import signal
 from scipy.fft import fft, fftshift
 import librosa
-from IPython.display import display, Audio
+from IPython.display import display, Audio as IPyAudio
+import matplotlib
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from mplwidget import MplWidget
+
+matplotlib.use("QtAgg")
 import bisect
 
 # pyinstrument
@@ -146,7 +150,23 @@ class MainWindow(QtWidgets.QMainWindow):
                     pen={'color': 'b', 'width': 2}  # 'b' stands for blue color
                 )
             else:
+                
+                #special case for the last slice to draw lines in start and end , not just the start
                 pos = self.our_signal.fft_data[0][last_item-1]
+                pos_start = self.our_signal.fft_data[0][first_item]
+                current_segment_smooth_window = self.custom_window(
+                    len(self.our_signal.fft_data[0][first_item:last_item]), max(self.our_signal.fft_data[1][first_item:last_item]), std)
+                self.our_signal.smooth_seg.append(current_segment_smooth_window)
+
+                # Assuming self.new_window.smoothingGraph1 is a PlotItem
+                self.new_window.smoothingGraph1.plot(
+                    self.our_signal.fft_data[0][first_item:last_item],
+                    current_segment_smooth_window,
+                    pen={'color': 'b', 'width': 2})
+                
+                # 'b' stands for blue color
+                v_line = pg.InfiniteLine(pos = pos_start , angle=90, movable=False)
+                self.new_window.smoothingGraph1.addItem(v_line)
             v_line = pg.InfiniteLine(pos = pos, angle=90, movable=False)
             self.new_window.smoothingGraph1.addItem(v_line)
 
@@ -163,7 +183,26 @@ class MainWindow(QtWidgets.QMainWindow):
         # Load the UI Page
         self.ui = uic.loadUi('Mainwindow.ui', self)
         self.setWindowTitle("Signal Equlizer")
-        self.graph_style_ui()
+        self.graph_load_ui()
+        
+        # Other Attributes
+        self.speed = 50
+        self.end_ind = 50
+        self.timer = QTimer()
+        self.timer.setInterval(50)
+        self.timer.timeout.connect(lambda: self.updating_graphs())
+
+        self.ui.playPause.clicked.connect(self.play_pause)
+        self.ui.zoomIn.clicked.connect(self.zoom_in)
+        self.ui.zoomOut.clicked.connect(self.zoom_out)
+        self.ui.resetButton.clicked.connect(self.reset)
+
+        # Set speed slider properties
+        self.speedSlider.setMinimum(0)
+        self.speedSlider.setMaximum(200)
+        self.speedSlider.setSingleStep(5)
+        self.speedSlider.setValue(self.speed)
+        self.speedSlider.valueChanged.connect(self.change_speed)
 
         self.ui.smoothingWindow.clicked.connect(self.openNewWindow)
         self.ui.browseFile.clicked.connect(self.browse)
@@ -175,20 +214,34 @@ class MainWindow(QtWidgets.QMainWindow):
             self.handle_combobox_selection)
         self.ui.spectogramCheck.stateChanged.connect(self.show_spectrogram)
 
-    def graph_style_ui(self):
+    def set_icon(self, icon_path):
+        # Load an icon
+        icon = QIcon(icon_path)
+        # Set the icon for the button
+        self.playPause.setIcon(icon)
+
+    def graph_load_ui(self):
+
+        # Create an instance of MplWidget for spectrogram
+        self.spectrogram_widget1 = MplWidget()
+        self.spectrogram_widget2 = MplWidget()
+
+        # Create a QVBoxLayout for the QWidget
+        spectrogram_layout1 = QVBoxLayout(self.ui.spectogram1)
+        spectrogram_layout1.addWidget(self.spectrogram_widget1)
+
+        spectrogram_layout2 = QVBoxLayout(self.ui.spectogram2)
+        spectrogram_layout2.addWidget(self.spectrogram_widget2)
+
         # Set the background of graph1 and graph2 to transparent
         self.ui.graph1.setBackground("transparent")
         self.ui.graph2.setBackground("transparent")
-
-        # Set the background of spectogram1 and spectogram2 to transparent
-        self.ui.spectogram1.setBackground("transparent")
-        self.ui.spectogram2.setBackground("transparent")
 
         # Add items to the modeList widget
         self.ui.modeList.addItem("Uniform Range")
         self.ui.modeList.addItem("Musical Instruments")
         self.ui.modeList.addItem("Animal Sounds")
-        self.ui.modeList.addItem("ECG Abnormalities")
+        self.ui.modeList.addItem("ECG Abnormalities")
 
     def show_spectrogram(self, state):
         if state == 2:  # Checked state
@@ -240,6 +293,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal.time = time
         self.our_signal.sr = sample_rate
         sample_interval = 1 / self.our_signal.sr
+        self.our_signal.data_x = []
+        self.our_signal.data_y = []
+
         x, y = self.get_fft_values(sample_interval, len(self.our_signal.data))
         self.our_signal.fft_data = [x, y]
         
@@ -265,14 +321,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.handle_selected_mode()
         self.split_data()
         self.plot_signal()
+        self.plot_spectrogram()
 
     def plot_signal(self):
-        if self.our_signal:
+        if signal:
             self.ui.graph1.clear()
             self.ui.graph1.setLabel('left', "Amplitude")
             self.ui.graph1.setLabel('bottom', "Time")
-            plot_item = self.ui.graph1.plot(
-                self.our_signal.time, self.our_signal.data, name=f"{self.our_signal.name}", pen=(64, 92, 245))
+            self.our_signal.data_x = self.our_signal.time[:self.end_ind]
+            self.our_signal.data_y = self.our_signal.data[:self.end_ind]
+            self.plot_item = self.ui.graph1.plot(self.our_signal.data_x, self.our_signal.data_y, name=self.our_signal.name, pen=(64, 92, 245))
 
             # Check if there is already a legend and remove it
             if self.ui.graph1.plotItem.legend is not None:
@@ -280,7 +338,70 @@ class MainWindow(QtWidgets.QMainWindow):
 
             # Add a legend to the plot
             legend = self.ui.graph1.addLegend()
-            legend.addItem(plot_item, name=f"{self.our_signal.name}")
+            legend.addItem(self.plot_item, name=self.our_signal.name)
+            self.set_icon("icons/pause-square.png")
+            self.ui.playPause.setText("Pause")
+        
+        if not self.timer.isActive():
+            self.timer.start(50)
+
+
+    def updating_graphs(self):
+            data , time = self.our_signal.data, self.our_signal.time
+
+            data_X = time[:self.end_ind  + self.speed]
+            data_Y = data[:self.end_ind  + self.speed]
+            self.end_ind += self.speed
+
+            if (data_X[-1] < 1):
+                self.ui.graph1.setXRange(0 , 1)
+            else:
+                self.ui.graph1.setXRange(data_X[-1] - 1, data_X[-1])
+
+            self.plot_item.setData(data_X, data_Y, visible=True)
+            # self.ui.graph1.setLimits(
+            #     xMin=0, xMax=self.end_ind, yMin=y_min-0.3, yMax=y_max+0.3)
+            # self.ui.graph1.autoRange()
+
+
+    def play_pause(self):
+            if self.timer.isActive():
+                self.timer.stop()
+                self.set_icon("icons/play-square-svgrepo-com.png")
+                self.ui.playPause.setText("Play")
+            else:
+                self.set_icon("icons/pause-square.png")
+                self.ui.playPause.setText("Pause")
+                self.timer.start()
+
+    def zoom_in(self):
+            view_box = self.graph1.plotItem.getViewBox()
+            view_box.scaleBy((0.5, 1))
+
+    def zoom_out(self):
+            view_box = self.graph1.plotItem.getViewBox()
+            view_box.scaleBy((1.5, 1))
+
+    def change_speed(self):
+        self.speed = self.speedSlider.value()
+
+    def reset(self):
+        msg_box = QMessageBox()
+
+        msg_box.setText("Do you want to clear the graph?")
+        msg_box.setWindowTitle("Clear Graph")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+
+        result = msg_box.exec()
+
+        if result == QMessageBox.StandardButton.Ok:
+            self.ui.graph1.clear()
+
+
+    def plot_spectrogram(self):
+        if self.our_signal:
+            self.spectrogram_widget1.plot_spectrogram(
+                self.our_signal.data, self.our_signal.sr, title='Spectrogram', x_label='Time', y_label='Frequency')
             
     # searching , dont forget it
     def find_closest_index(self,array, target):
