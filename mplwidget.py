@@ -17,10 +17,7 @@ class MplWidget(QWidget):
 
         # Set the color of the axes to white
         self.canvas.axes.tick_params(axis='both', colors='white')
-        # self.canvas.axes.spines['bottom'].set_color('white')
-        # self.canvas.axes.spines['top'].set_color('white')
-        # self.canvas.axes.spines['right'].set_color('white')
-        # self.canvas.axes.spines['left'].set_color('white')
+
 
         self.setLayout(vertical_layout)
 
@@ -45,5 +42,3 @@ class MplWidget(QWidget):
     def clear(self):
         self.canvas.axes.clear()
         self.canvas.draw()
-
-

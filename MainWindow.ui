@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1314</width>
-    <height>735</height>
+    <width>838</width>
+    <height>517</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -478,7 +478,7 @@ margin-top: 10px;</string>
             <number>10</number>
            </property>
            <item>
-            <layout class="QVBoxLayout" name="verticalGraphs" stretch="2,0,1">
+            <layout class="QVBoxLayout" name="verticalGraphs" stretch="2,1,2">
              <property name="spacing">
               <number>20</number>
              </property>
@@ -934,7 +934,7 @@ background: rgba(74, 74, 74, 0);</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1314</width>
+     <width>838</width>
      <height>22</height>
     </rect>
    </property>

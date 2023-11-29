@@ -1,7 +1,8 @@
+import bisect
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QColorDialog, QListWidgetItem, QPushButton, QSlider
-from PyQt6.QtCore import Qt ,QTimer
-from PyQt6.QtGui import  QIcon
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QIcon
 import numpy as np
 import pandas as pd
 import sys
@@ -20,7 +21,6 @@ from mplwidget import MplWidget
 from audioWidget import AudioWidget
 
 matplotlib.use("QtAgg")
-import bisect
 
 # pyinstrument
 # pip install pyqtgraph pydub
@@ -36,13 +36,8 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.init_ui()
         self.selected_function = None
-        self.smooth_time = []
-        self.smooth_data = []
         self.our_signal = None
         self.activation = None
-        # self.timer = QTimer(self)
-        # self.timer.timeout.connect(self.update_plot)
-        # self.timer.start(1000)  # Update plot every 1 second (adjust this as needed)
 
     def rectangle_window(self, amplitude, N):
         return amplitude * signal.windows.boxcar(N)
@@ -91,18 +86,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.new_window.show()
             self.new_window.destroyed.connect(self.onNewWindowClosed)
-            
+
     def handle_selected_mode(self):
         mode = self.ui.modeList.currentIndex()
-        if mode == 0 :
+        if mode == 0:
             self.activation = 'uniform'
         elif mode == 1:
             self.activation = 'music'
-        elif mode ==2:
+        elif mode == 2:
             self.activation = 'animal'
         else:
             self.activation = 'ecg'
-            
+
     def handle_selected_function(self):
         self.selected_function = self.new_window.functionList.currentText()
 
@@ -131,7 +126,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return smooth_data
 
     def smoothing_real_time(self):
-        first_item ,last_item = self.our_signal.slice_indices[-1]
+        first_item, last_item = self.our_signal.slice_indices[-1]
         self.new_window.smoothingGraph1.clear()
         self.new_window.smoothingGraph1.plot(
             self.our_signal.fft_data[0][:last_item], self.our_signal.fft_data[1][:last_item])
@@ -140,9 +135,8 @@ class MainWindow(QtWidgets.QMainWindow):
             if i != len(self.our_signal.slice_indices) - 1:
                 start, end = self.our_signal.slice_indices[i]
                 pos = self.our_signal.fft_data[0][start]
-                current_segment_smooth_window = self.custom_window(
-                    len(self.our_signal.fft_data[0][start:end]), max(self.our_signal.fft_data[1][start:end]), std)
-                self.our_signal.smooth_seg.append(current_segment_smooth_window)
+                current_segment_smooth_window = self.fill_smooth_segments(
+                    start, end, std)
 
                 # Assuming self.new_window.smoothingGraph1 is a PlotItem
                 self.new_window.smoothingGraph1.plot(
@@ -151,29 +145,37 @@ class MainWindow(QtWidgets.QMainWindow):
                     pen={'color': 'b', 'width': 2}  # 'b' stands for blue color
                 )
             else:
-                
-                #special case for the last slice to draw lines in start and end , not just the start
+
+                # special case for the last slice to draw lines in start and end , not just the start
                 pos = self.our_signal.fft_data[0][last_item-1]
                 pos_start = self.our_signal.fft_data[0][first_item]
-                current_segment_smooth_window = self.custom_window(
-                    len(self.our_signal.fft_data[0][first_item:last_item]), max(self.our_signal.fft_data[1][first_item:last_item]), std)
-                self.our_signal.smooth_seg.append(current_segment_smooth_window)
+                current_segment_smooth_window = self.fill_smooth_segments(
+                    first_item, last_item, std)
 
                 # Assuming self.new_window.smoothingGraph1 is a PlotItem
                 self.new_window.smoothingGraph1.plot(
                     self.our_signal.fft_data[0][first_item:last_item],
                     current_segment_smooth_window,
                     pen={'color': 'b', 'width': 2})
-                
+
                 # 'b' stands for blue color
-                v_line = pg.InfiniteLine(pos = pos_start , angle=90, movable=False)
+                v_line = pg.InfiniteLine(
+                    pos=pos_start, angle=90, movable=False)
                 self.new_window.smoothingGraph1.addItem(v_line)
-            v_line = pg.InfiniteLine(pos = pos, angle=90, movable=False)
+            v_line = pg.InfiniteLine(pos=pos, angle=90, movable=False)
             self.new_window.smoothingGraph1.addItem(v_line)
+
+    def fill_smooth_segments(self, start, end, std):
+        amp = max(self.our_signal.fft_data[1][start:end])
+        self.our_signal.smooth_seg_amp.append(amp)
+        current_segment_smooth_window = self.custom_window(
+            len(self.our_signal.fft_data[0][start:end]), amp, std)
+        self.our_signal.smooth_seg.append(current_segment_smooth_window)
+        return current_segment_smooth_window
 
     def save(self):
         self.our_signal.smoothing_window_name = self.selected_function
-        self.our_signal.smoothing_window_data = self.smooth_data
+
         self.onNewWindowClosed()
 
     def onNewWindowClosed(self):
@@ -185,7 +187,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui = uic.loadUi('Mainwindow.ui', self)
         self.setWindowTitle("Signal Equlizer")
         self.graph_load_ui()
-        
+
         # Other Attributes
         self.speed = 50
         self.end_ind = 50
@@ -307,23 +309,30 @@ class MainWindow(QtWidgets.QMainWindow):
 
         x, y = self.get_fft_values(sample_interval, len(self.our_signal.data))
         self.our_signal.fft_data = [x, y]
-        
-        
+
         self.process_signal()
 
     def get_fft_values(self, T, N):
-
         f_values = np.linspace(0.0, 1.0/(2.0*T), N//2)
         # we have considered half of the sampled data points due to symmetry nature of FFT
-        fft_values = np.fft.fft(self.our_signal.data, N)  # complex coefficients of fft
+        # complex coefficients of fft
+        fft_values = np.fft.fft(self.our_signal.data, N)
+
         fft_values = (2/N) * np.abs(fft_values[:N//2])
+
+        self.our_signal.phase = np.angle(fft_values[:N//2])
+
         return f_values, fft_values
 
-    # def freq_comp(self, signal, sample_rate):
-    #     fft_result = fft(signal.data)
-    #     # Calculate the frequencies corresponding to the FFT result
-    #     frequencies = np.fft.fftfreq(len(fft_result), 1 / sample_rate)
-    #     return frequencies, fft_result
+    def reconstruct_signal(magnitude_values, phase_values):
+        # Combine magnitude and phase to create a complex array
+        complex_values = magnitude_values * np.exp(1j * phase_values)
+
+        # Inverse FFT (iFFT)
+        reconstructed_signal = np.fft.ifft(complex_values)
+
+        # Extract the real part of the signal
+        return np.real(reconstructed_signal)
 
     def process_signal(self):
         # self.display_audio(signal)
@@ -340,7 +349,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.graph1.setLabel('bottom', "Time")
             self.our_signal.data_x = self.our_signal.time[:self.end_ind]
             self.our_signal.data_y = self.our_signal.data[:self.end_ind]
-            self.plot_item = self.ui.graph1.plot(self.our_signal.data_x, self.our_signal.data_y, name=self.our_signal.name, pen=(64, 92, 245))
+            self.plot_item = self.ui.graph1.plot(
+                self.our_signal.data_x, self.our_signal.data_y, name=self.our_signal.name, pen=(64, 92, 245))
 
             # Check if there is already a legend and remove it
             if self.ui.graph1.plotItem.legend is not None:
@@ -353,28 +363,23 @@ class MainWindow(QtWidgets.QMainWindow):
             
             self.set_icon("icons/pause-square.png")
             self.ui.playPause.setText("Pause")
-        
+
         if not self.timer.isActive():
             self.timer.start(50)
 
-
     def updating_graphs(self):
-            data , time = self.our_signal.data, self.our_signal.time
+        data, time = self.our_signal.data, self.our_signal.time
 
-            data_X = time[:self.end_ind  + self.speed]
-            data_Y = data[:self.end_ind  + self.speed]
-            self.end_ind += self.speed
+        data_X = time[:self.end_ind + self.speed]
+        data_Y = data[:self.end_ind + self.speed]
+        self.end_ind += self.speed
 
-            if (data_X[-1] < 1):
-                self.ui.graph1.setXRange(0 , 1)
-            else:
-                self.ui.graph1.setXRange(data_X[-1] - 1, data_X[-1])
+        if (data_X[-1] < 1):
+            self.ui.graph1.setXRange(0, 1)
+        else:
+            self.ui.graph1.setXRange(data_X[-1] - 1, data_X[-1])
 
-            self.plot_item.setData(data_X, data_Y, visible=True)
-            # self.ui.graph1.setLimits(
-            #     xMin=0, xMax=self.end_ind, yMin=y_min-0.3, yMax=y_max+0.3)
-            # self.ui.graph1.autoRange()
-
+        self.plot_item.setData(data_X, data_Y, visible=True)
 
     def play_pause(self):
             if self.our_signal:
@@ -389,14 +394,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.timer.start()
 
     def zoom_in(self):
-            if self.our_signal:
-                view_box = self.graph1.plotItem.getViewBox()
-                view_box.scaleBy((0.5, 0.5))
+        view_box = self.graph1.plotItem.getViewBox()
+        view_box.scaleBy((0.5, 1))
 
     def zoom_out(self):
-            if self.our_signal:
-                view_box = self.graph1.plotItem.getViewBox()
-                view_box.scaleBy((1.5, 1.5))
+        view_box = self.graph1.plotItem.getViewBox()
+        view_box.scaleBy((1.5, 1))
 
     def change_speed(self):
         if self.our_signal:
@@ -412,11 +415,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
             result = msg_box.exec()
 
-            if result == QMessageBox.StandardButton.Ok:
-                self.timer.stop()
-                self.end_ind = 50
-                self.ui.graph1.clear()
-                self.spectrogram_widget1.clear() 
+        if result == QMessageBox.StandardButton.Ok:
+            self.ui.graph1.clear()
 
 
     def plot_spectrogram(self):
@@ -430,7 +430,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.audio_widget.play_audio(self.our_signal.data, self.our_signal.sr)
             
     # searching , dont forget it
-    def find_closest_index(self,array, target):
+    def find_closest_index(self, array, target):
         """Find the index of the closest value in the array to the target."""
         index = bisect.bisect_left(array, target)
         if index == 0:
@@ -444,29 +444,23 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             return index - 1
 
-
-    def split_data(self ):
-        # round the frequencies 
-        self.our_signal.fft_data[0] = [round(self.our_signal.fft_data[0][i])for i in range (len(self.our_signal.fft_data[0]))]
+    def split_data(self):
+        # round the frequencies
+        self.our_signal.fft_data[0] = [round(
+            self.our_signal.fft_data[0][i])for i in range(len(self.our_signal.fft_data[0]))]
         if self.activation == 'uniform':
-            num_slices = 10 
+            num_slices = 10
             excess_elements = len(self.our_signal.fft_data[0]) % num_slices
             if excess_elements:
                 self.our_signal.data = self.our_signal.data[:-excess_elements]
                 self.our_signal.time = self.our_signal.time[:-excess_elements]
-                self.our_signal.fft_data[0] =self.our_signal.fft_data[0][:-excess_elements]
-                self.our_signal.fft_data[1] =self.our_signal.fft_data[1][:-excess_elements] 
-            slice_size = int(len(self.our_signal.fft_data[0])/num_slices)  
-            self.our_signal.slice_indices = [(i * slice_size, (i + 1) * slice_size) for i in range(num_slices)]
-            
+                self.our_signal.fft_data[0] = self.our_signal.fft_data[0][:-excess_elements]
+                self.our_signal.fft_data[1] = self.our_signal.fft_data[1][:-excess_elements]
+            slice_size = int(len(self.our_signal.fft_data[0])/num_slices)
+            self.our_signal.slice_indices = [
+                (i * slice_size, (i + 1) * slice_size) for i in range(num_slices)]
+
         elif self.activation == 'music':
-            # ranges = [(0, 100), (150, 600), (600, 800), (800, 1200)]
-            # # Iterate over each frequency range
-            # for start, end in ranges:
-                
-            #     indices = [freq for  freq in self.our_signal.fft_data[0] if start <= freq <= end]
-            #     self.our_signal.slice_indices.append((indices[0] if indices else None, indices[-1] if indices else None))
-            # allowance_percent = 0.1  # 10% allowance
 
             ranges = [(0, 150), (150, 600), (600, 800), (800, 1200)]
 
@@ -476,9 +470,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 start_index = self.find_closest_index(frequencies, start)
                 end_index = self.find_closest_index(frequencies, end)
                 self.our_signal.slice_indices.append((start_index, end_index))
-                
+
         elif self.activation == 'animal':
-            ranges = [(400, 420), (600, 700), (1300, 1600), (3000,4000)]
+            ranges = [(400, 420), (600, 700), (1300, 1600), (3000, 4000)]
 
             # Assuming self.our_signal.fft_data[0] contains the frequency values
             frequencies = self.our_signal.fft_data[0]
@@ -497,12 +491,27 @@ class MainWindow(QtWidgets.QMainWindow):
                 layout.itemAt(i).widget().setParent(None)
         for _ in range(num_sliders):
             slider = QSlider(Qt.Orientation.Vertical)
+            slider.setValue(10)
+            slider.setSingleStep(1)
+            slider.setRange(0, 20)
             layout.addWidget(slider)
 
     def handle_combobox_selection(self):
         current_index = self.ui.modeList.currentIndex()
         num_sliders = 10 if current_index == 0 else 4
         self.add_sliders(num_sliders)
+        sliders = self.ui.slidersWidget.findChildren(QSlider)
+        for slider in sliders:
+            slider.valueChanged.connect(
+                lambda slider_value=slider.value() / 10, slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
+
+    def editing(self, slider_value, slidernum):
+        start, end = self.our_signal.slice_indices[slidernum]
+        mag_fft = np.array(self.our_signal.fft_data[1][start:end])
+        smooth_data = slider_value * \
+            np.array(
+                self.our_signal.smooth_seg[slidernum] / self.our_signal.smooth_seg_amp[slidernum])
+        result = mag_fft * smooth_data
 
 
 def main():
