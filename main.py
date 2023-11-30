@@ -39,7 +39,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal = None  # The current signal
         self.activation = 'uniform'  # the mode of operation (default)
         self.current_slider = None
-        self.window_function_state = None
 
     def rectangle_window(self, amplitude, N):
         return amplitude * signal.windows.boxcar(N)
@@ -88,9 +87,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.new_window.stdSpinBox.valueChanged.connect(
                 self.handle_selected_function)
 
-            self.window_function_state = False
-            self.new_window.functionList.currentIndexChanged.connect(
-                self.window_changed)
             self.new_window.functionList.currentIndexChanged.connect(
                 self.handle_selected_function)
 
@@ -98,9 +94,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.new_window.show()
             self.new_window.destroyed.connect(self.onNewWindowClosed)
-
-    def window_changed(self):
-        self.window_function_state = True
 
     def handle_selected_mode(self):
         mode = self.ui.modeList.currentIndex()
@@ -170,7 +163,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.new_window.smoothingGraph1.plot(
                 self.our_signal.fft_data[0][start:end],
                 current_segment_smooth_window, pen={'color': 'b', 'width': 2})
-        self.window_function_state = False
 
     def segment(self, start, end, sparse=False):
         if sparse:
@@ -389,7 +381,6 @@ class MainWindow(QtWidgets.QMainWindow):
             legend = self.ui.graph1.addLegend()
             legend.addItem(self.plot_item, name=self.our_signal.name)
 
-            
             self.set_icon("icons/pause-square.png")
             self.ui.playPause.setText("Pause")
 
@@ -411,16 +402,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plot_item.setData(data_X, data_Y, visible=True)
 
     def play_pause(self):
-            if self.our_signal:
-                if self.timer.isActive():
-                    self.timer.stop()
-                    self.set_icon("icons/play-square-svgrepo-com.png")
-                    self.ui.playPause.setText("Play")
-                    # self.ui.graph1.autoRange()
-                else:
-                    self.set_icon("icons/pause-square.png")
-                    self.ui.playPause.setText("Pause")
-                    self.timer.start()
+        if self.our_signal:
+            if self.timer.isActive():
+                self.timer.stop()
+                self.set_icon("icons/play-square-svgrepo-com.png")
+                self.ui.playPause.setText("Play")
+                # self.ui.graph1.autoRange()
+            else:
+                self.set_icon("icons/pause-square.png")
+                self.ui.playPause.setText("Pause")
+                self.timer.start()
 
     def zoom_in(self):
         view_box = self.graph1.plotItem.getViewBox()
@@ -440,24 +431,24 @@ class MainWindow(QtWidgets.QMainWindow):
 
             msg_box.setText("Do you want to clear the graph?")
             msg_box.setWindowTitle("Clear Graph")
-            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+            msg_box.setStandardButtons(
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
             result = msg_box.exec()
 
         if result == QMessageBox.StandardButton.Ok:
             self.ui.graph1.clear()
 
-
     def plot_spectrogram(self):
         if self.our_signal:
             self.spectrogram_widget1.plot_spectrogram(
                 self.our_signal.data, self.our_signal.sr, title='Spectrogram', x_label='Time', y_label='Frequency')
-            
 
     def display_audio(self):
         if self.our_signal:
-            self.audio_widget.play_audio(self.our_signal.data, self.our_signal.sr)
-            
+            self.audio_widget.play_audio(
+                self.our_signal.data, self.our_signal.sr)
+
     # searching , dont forget it
     def find_closest_index(self, array, target):
         """Find the index of the closest value in the array to the target."""
@@ -509,9 +500,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 end_index = self.find_closest_index(frequencies, end)
                 self.our_signal.slice_indices.append((start_index, end_index))
 
-
-
-
     def add_sliders(self, num_sliders):
         layout = self.ui.slidersWidget.layout()
         if layout:
@@ -537,12 +525,6 @@ class MainWindow(QtWidgets.QMainWindow):
         start, end = self.our_signal.slice_indices[slidernum]
         mag_fft = np.array(self.our_signal.fft_data[1][start:end])
         freq_values = np.array(self.our_signal.fft_data[0][start:end])
-        # print("before Editing")
-        # print(slidernum)
-        # print(len(mag_fft))
-        # print(mag_fft[:10])
-        # print(self.our_signal.smooth_seg_amp)
-        # print(self.our_signal.each_slider_reference)
         self.current_slider = slidernum
         factor_of_multiplication = slider_value / \
             self.our_signal.each_slider_reference[slidernum]
@@ -553,12 +535,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal.fft_data[1][start:end] = result
         self.our_signal.smooth_seg_amp[slidernum] = (factor_of_multiplication)
         self.our_signal.each_slider_reference[slidernum] = slider_value
-        # print("after Editing")
-        # print(slidernum)
-        # print(len(result))
-        # print(result[:10])
-        # print(self.our_signal.smooth_seg_amp)
-        # print(self.our_signal.each_slider_reference)
 
     def update_after_windowing(self):
         data = self.reconstruct_signal(
