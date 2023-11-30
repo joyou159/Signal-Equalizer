@@ -35,9 +35,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.init_ui()
-        self.selected_function = None
-        self.our_signal = None
-        self.activation = None
+        self.selected_function = "Rectangle"  # window function
+        self.our_signal = None  # The current signal
+        self.activation = 'uniform'  # the mode of operation (default)
+        self.current_slider = None
+        self.window_function_state = None
 
     def rectangle_window(self, amplitude, N):
         return amplitude * signal.windows.boxcar(N)
@@ -63,22 +65,32 @@ class MainWindow(QtWidgets.QMainWindow):
             self.show_error_message("Please select a signal first!")
 
         else:
+            # disable the interactivity in the main window
             self.setEnabled(False)
-
             self.new_window = QtWidgets.QMainWindow()
+
             uic.loadUi('SmoothingWindow.ui', self.new_window)
-            self.new_window.functionList.addItem('Rectangle')
+            self.new_window.functionList.addItem(
+                'Rectangle')  # the default window function
             self.new_window.functionList.addItem('Hamming')
             self.new_window.functionList.addItem('Hanning')
             self.new_window.functionList.addItem('Gaussian')
+
+            self.new_window.functionList.setCurrentText(
+                self.our_signal.smoothing_window_name)
+            print(self.our_signal.smoothing_window_name)
+
+            # spine box of the standard deviation of the gaussian window function
             self.new_window.stdSpinBox.setValue(5)
             self.new_window.stdSpinBox.setRange(0, 1000)
-            self.new_window.functionList.setCurrentIndex(0)
-            self.handle_selected_function()
+            self.handle_selected_function()  # ??
 
             self.new_window.stdSpinBox.valueChanged.connect(
                 self.handle_selected_function)
 
+            self.window_function_state = False
+            self.new_window.functionList.currentIndexChanged.connect(
+                self.window_changed)
             self.new_window.functionList.currentIndexChanged.connect(
                 self.handle_selected_function)
 
@@ -86,6 +98,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.new_window.show()
             self.new_window.destroyed.connect(self.onNewWindowClosed)
+
+    def window_changed(self):
+        self.window_function_state = True
 
     def handle_selected_mode(self):
         mode = self.ui.modeList.currentIndex()
@@ -99,9 +114,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.activation = 'ecg'
 
     def handle_selected_function(self):
+        # why ?? (what about smoothing_window_name in the signal class)
+
         self.selected_function = self.new_window.functionList.currentText()
 
-        if self.selected_function == 'Gaussian':
+        # Due to possible truncation
+
+        if self.selected_function == 'Gaussian':  # layout settings
             self.new_window.stdSpinBox.show()
             self.new_window.std.show()
         else:
@@ -110,7 +129,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.smoothing_real_time()
 
-    def custom_window(self, samples, amplitude, std):
+    def custom_window(self, samples, amplitude):
         if self.selected_function == 'Rectangle':
             smooth_data = self.rectangle_window(
                 amplitude, samples)
@@ -122,55 +141,65 @@ class MainWindow(QtWidgets.QMainWindow):
             smooth_data = self.hanning_window(samples, amplitude)
 
         elif self.selected_function == 'Gaussian':
+            std = int(self.new_window.stdSpinBox.text())
             smooth_data = self.gaussian_window(samples, amplitude, std)
         return smooth_data
 
     def smoothing_real_time(self):
-        first_item, last_item = self.our_signal.slice_indices[-1]
+        _, last_item = self.our_signal.slice_indices[-1]
         self.new_window.smoothingGraph1.clear()
         self.new_window.smoothingGraph1.plot(
             self.our_signal.fft_data[0][:last_item], self.our_signal.fft_data[1][:last_item])
-        for i in range(len(self.our_signal.slice_indices)):
-            std = int(self.new_window.stdSpinBox.text())
-            if i != len(self.our_signal.slice_indices) - 1:
-                start, end = self.our_signal.slice_indices[i]
-                pos = self.our_signal.fft_data[0][start]
-                current_segment_smooth_window = self.fill_smooth_segments(
-                    start, end, std)
 
-                # Assuming self.new_window.smoothingGraph1 is a PlotItem
-                self.new_window.smoothingGraph1.plot(
-                    self.our_signal.fft_data[0][start:end],
-                    current_segment_smooth_window,
-                    pen={'color': 'b', 'width': 2}  # 'b' stands for blue color
-                )
+        for i in range(len(self.our_signal.slice_indices)):
+            start, end = self.our_signal.slice_indices[i]
+            if self.activation == "uniform":
+                if i == len(self.our_signal.slice_indices) - 1:
+                    self.segment(start, end-1, sparse=False)
+                else:
+                    self.segment(start, end, sparse=False)
             else:
 
-                # special case for the last slice to draw lines in start and end , not just the start
-                pos = self.our_signal.fft_data[0][last_item-1]
-                pos_start = self.our_signal.fft_data[0][first_item]
-                current_segment_smooth_window = self.fill_smooth_segments(
-                    first_item, last_item, std)
+                if i == len(self.our_signal.slice_indices) - 1:
+                    self.segment(start, end-1, sparse=True)
+                else:
+                    self.segment(start, end, sparse=True)
 
-                # Assuming self.new_window.smoothingGraph1 is a PlotItem
-                self.new_window.smoothingGraph1.plot(
-                    self.our_signal.fft_data[0][first_item:last_item],
-                    current_segment_smooth_window,
-                    pen={'color': 'b', 'width': 2})
+            current_segment_smooth_window = self.fill_smooth_segments(i)
 
-                # 'b' stands for blue color
-                v_line = pg.InfiniteLine(
-                    pos=pos_start, angle=90, movable=False)
-                self.new_window.smoothingGraph1.addItem(v_line)
-            v_line = pg.InfiniteLine(pos=pos, angle=90, movable=False)
+            self.new_window.smoothingGraph1.plot(
+                self.our_signal.fft_data[0][start:end],
+                current_segment_smooth_window, pen={'color': 'b', 'width': 2})
+        self.window_function_state = False
+
+    def segment(self, start, end, sparse=False):
+        if sparse:
+            start_freq = self.our_signal.fft_data[0][start]
+            v_line = pg.InfiniteLine(pos=start_freq, angle=90, movable=False)
             self.new_window.smoothingGraph1.addItem(v_line)
+        end_freq = self.our_signal.fft_data[0][end]
+        v_line = pg.InfiniteLine(pos=end_freq, angle=90, movable=False)
+        self.new_window.smoothingGraph1.addItem(v_line)
 
-    def fill_smooth_segments(self, start, end, std):
-        amp = max(self.our_signal.fft_data[1][start:end])
-        self.our_signal.smooth_seg_amp.append(amp)
-        current_segment_smooth_window = self.custom_window(
-            len(self.our_signal.fft_data[0][start:end]), amp, std)
-        self.our_signal.smooth_seg.append(current_segment_smooth_window)
+    def fill_smooth_segments(self, i):
+        start, end = self.our_signal.slice_indices[i]
+        if self.our_signal.smooth_seg_amp == [] or self.current_slider == None:
+            amp = max(self.our_signal.fft_data[1][start:end])
+            self.our_signal.smooth_seg_amp.append(amp)
+            current_segment_smooth_window = self.custom_window(
+                len(self.our_signal.fft_data[0][start:end]), amp)
+            self.our_signal.smooth_seg.append(current_segment_smooth_window)
+            print("initialize")
+
+        else:
+            if i == self.current_slider:
+                amp = (max(self.our_signal.fft_data[1][start:end]) /
+                       self.our_signal.smooth_seg_amp[i])
+            else:
+                amp = max(self.our_signal.fft_data[1][start:end])
+            current_segment_smooth_window = self.custom_window(
+                len(self.our_signal.fft_data[0][start:end]), amp)
+            print("update")
         return current_segment_smooth_window
 
     def save(self):
@@ -304,12 +333,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal.time = time
         self.our_signal.sr = sample_rate
         sample_interval = 1 / self.our_signal.sr
+        self.our_signal.smoothing_window_name = self.selected_function
         self.our_signal.data_x = []
         self.our_signal.data_y = []
 
         x, y = self.get_fft_values(sample_interval, len(self.our_signal.data))
         self.our_signal.fft_data = [x, y]
-
         self.process_signal()
 
     def get_fft_values(self, T, N):
@@ -446,8 +475,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def split_data(self):
         # round the frequencies
-        self.our_signal.fft_data[0] = [round(
-            self.our_signal.fft_data[0][i])for i in range(len(self.our_signal.fft_data[0]))]
+        # self.our_signal.fft_data[0] = [round(
+        #     self.our_signal.fft_data[0][i]) for i in range(len(self.our_signal.fft_data[0]))]
         if self.activation == 'uniform':
             num_slices = 10
             excess_elements = len(self.our_signal.fft_data[0]) % num_slices
@@ -459,7 +488,6 @@ class MainWindow(QtWidgets.QMainWindow):
             slice_size = int(len(self.our_signal.fft_data[0])/num_slices)
             self.our_signal.slice_indices = [
                 (i * slice_size, (i + 1) * slice_size) for i in range(num_slices)]
-
         elif self.activation == 'music':
 
             ranges = [(0, 150), (150, 600), (600, 800), (800, 1200)]
@@ -489,11 +517,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if layout:
             for i in reversed(range(layout.count())):
                 layout.itemAt(i).widget().setParent(None)
-        for _ in range(num_sliders):
+        for i in range(num_sliders):
             slider = QSlider(Qt.Orientation.Vertical)
-            slider.setValue(10)
+            slider.setValue(50)
             slider.setSingleStep(1)
-            slider.setRange(0, 20)
+            slider.setRange(1, 200)
             layout.addWidget(slider)
 
     def handle_combobox_selection(self):
@@ -503,15 +531,38 @@ class MainWindow(QtWidgets.QMainWindow):
         sliders = self.ui.slidersWidget.findChildren(QSlider)
         for slider in sliders:
             slider.valueChanged.connect(
-                lambda slider_value=slider.value() / 10, slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
+                lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
 
     def editing(self, slider_value, slidernum):
         start, end = self.our_signal.slice_indices[slidernum]
         mag_fft = np.array(self.our_signal.fft_data[1][start:end])
-        smooth_data = slider_value * \
-            np.array(
-                self.our_signal.smooth_seg[slidernum] / self.our_signal.smooth_seg_amp[slidernum])
+        freq_values = np.array(self.our_signal.fft_data[0][start:end])
+        # print("before Editing")
+        # print(slidernum)
+        # print(len(mag_fft))
+        # print(mag_fft[:10])
+        # print(self.our_signal.smooth_seg_amp)
+        # print(self.our_signal.each_slider_reference)
+        self.current_slider = slidernum
+        factor_of_multiplication = slider_value / \
+            self.our_signal.each_slider_reference[slidernum]
+        smooth_data = (factor_of_multiplication) * np.array(
+            self.our_signal.smooth_seg[slidernum] / self.our_signal.smooth_seg_amp[slidernum])
         result = mag_fft * smooth_data
+        self.our_signal.smooth_seg[slidernum] = smooth_data
+        self.our_signal.fft_data[1][start:end] = result
+        self.our_signal.smooth_seg_amp[slidernum] = (factor_of_multiplication)
+        self.our_signal.each_slider_reference[slidernum] = slider_value
+        # print("after Editing")
+        # print(slidernum)
+        # print(len(result))
+        # print(result[:10])
+        # print(self.our_signal.smooth_seg_amp)
+        # print(self.our_signal.each_slider_reference)
+
+    def update_after_windowing(self):
+        data = self.reconstruct_signal(
+            self.our_signal.fft_data, self.our_signal.phase)
 
 
 def main():
