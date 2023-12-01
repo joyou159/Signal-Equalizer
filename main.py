@@ -177,6 +177,7 @@ class MainWindow(QtWidgets.QMainWindow):
         v_line = pg.InfiniteLine(pos=end_freq, angle=90, movable=False)
         self.new_window.smoothingGraph1.addItem(v_line)
 
+
     def fill_smooth_segments(self, i):
         start, end = self.our_signal.slice_indices[i]
         if self.our_signal.smooth_seg_amp == [] or self.current_slider == None:
@@ -198,10 +199,12 @@ class MainWindow(QtWidgets.QMainWindow):
             print("update")
         return current_segment_smooth_window
 
+
     def save(self):
         self.our_signal.smoothing_window_name = self.selected_function
 
         self.onNewWindowClosed()
+
 
     def onNewWindowClosed(self):
         self.new_window.close()
@@ -219,12 +222,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer = QTimer()
         self.timer.setInterval(50)
         self.timer.timeout.connect(self.updating_graphs)
+        # self.timer.timeout.connect(self.plot_spectrogram)
 
         self.ui.playPause.clicked.connect(self.play_pause)
         self.ui.zoomIn.clicked.connect(self.zoom_in)
         self.ui.zoomOut.clicked.connect(self.zoom_out)
         self.ui.resetButton.clicked.connect(self.reset)
-        self.ui.playAudio1.clicked.connect(self.toggle_audio)
+        self.ui.playAudio1.clicked.connect(self.toggle_audio_before)
+        self.ui.playAudio2.clicked.connect(self.toggle_audio_after)
+
 
         # Set speed slider properties
         self.speedSlider.setMinimum(0)
@@ -263,11 +269,18 @@ class MainWindow(QtWidgets.QMainWindow):
         spectrogram_layout2.addWidget(self.spectrogram_widget2)
 
         # Create an instance of the AudioWidget
-        self.audio_widget = AudioWidget()
+        self.audio_widget1 = AudioWidget()
 
         # Set up layout for the audio1 widget
-        audio_layout = QVBoxLayout(self.audio1)
-        audio_layout.addWidget(self.audio_widget)
+        audio_layout1 = QVBoxLayout(self.audio1)
+        audio_layout1.addWidget(self.audio_widget1)
+    
+        # Create an instance of the AudioWidget
+        self.audio_widget2 = AudioWidget()
+
+        # Set up layout for the audio1 widget
+        audio_layout2 = QVBoxLayout(self.audio2)
+        audio_layout2.addWidget(self.audio_widget2)
 
         # Set the background of graph1 and graph2 to transparent
         self.ui.graph1.setBackground("transparent")
@@ -372,8 +385,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def plot_signal(self):
         if self.our_signal:
             self.ui.graph1.clear()
-            self.ui.graph1.setLabel('left', "Amplitude")
-            self.ui.graph1.setLabel('bottom', "Time")
+            # self.ui.graph1.setLabel('left', "Amplitude")
+            # self.ui.graph1.setLabel('bottom', "Time")
 
             data_x = self.our_signal.time[:self.end_ind]
             data_y_before = self.our_signal.data[:self.end_ind]
@@ -403,10 +416,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.set_icon(self.ui.playPause, "icons/pause-square.png")
             self.ui.playPause.setText("Pause")
-        #     ln_data_y_after = len(data_y_after)
-        #     ln_data_y_before = len(data_y_before)
-        # if ln_data_y_before != ln_data_y_after:
-        #     self.excess = ln_data_y_before - ln_data_y_after
+
         if not self.timer.isActive():
             self.timer.start(50)
 
@@ -485,11 +495,14 @@ class MainWindow(QtWidgets.QMainWindow):
             # plot spectrogram of audio data
             self.spectrogram_widget1.plot_audio_spectrogram(
                 self.our_signal.data, self.our_signal.sr)
+            
+            self.spectrogram_widget2.plot_audio_spectrogram(
+                self.our_signal.data_after, self.our_signal.sr)
 
-    def toggle_audio(self):
+    def toggle_audio_before(self):
         if self.our_signal:
-            if not self.audio_widget.playing:
-                self.audio_widget.play_audio(
+            if not self.audio_widget1.playing:
+                self.audio_widget1.play_audio(
                     self.our_signal.data, self.our_signal.sr)
                 self.ui.playAudio1.setText("Pause Audio")
                 self.set_icon(self.ui.playAudio1, "icons/pause-square.png")
@@ -498,6 +511,20 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.ui.playAudio1.setText("Play Audio")
                 self.set_icon(self.ui.playAudio1,
                               "icons/play-square-svgrepo-com.png")
+                
+    def toggle_audio_after(self):  
+            if self.our_signal:             
+                # cusmization for audio after modification 
+                if not self.audio_widget2.playing:
+                    self.audio_widget2.play_audio(
+                        self.our_signal.data_after, self.our_signal.sr)
+                    self.ui.playAudio2.setText("Pause Audio")
+                    self.set_icon(self.ui.playAudio2, "icons/pause-square.png")
+                else:
+                    sd.stop()
+                    self.ui.playAudio2.setText("Play Audio")
+                    self.set_icon(self.ui.playAudio2,
+                                "icons/play-square-svgrepo-com.png")
 
     # searching , dont forget it
 
@@ -588,6 +615,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal.each_slider_reference[slidernum] = slider_value
 
         self.our_signal.data_after = self.get_inverse_fft_values()
+
+        self.spectrogram_widget2.plot_audio_spectrogram(
+            self.our_signal.data_after, self.our_signal.sr)
 
 
 def main():
