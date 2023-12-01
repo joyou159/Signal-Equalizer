@@ -8,6 +8,8 @@ class Signal:
         self.time = []
         self.sr = None
 
+        self.data_after = []
+
         # mag and phase
         self.phase = None
 

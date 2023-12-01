@@ -16,7 +16,7 @@ class AudioWidget(QWidget):
         layout.addWidget(self.progress_bar)
         layout.addWidget(self.duration_label)
 
-        self.style_ui()
+        self.style_progress_bar()
 
         # Initialize timer for updating the duration label and progress bar
         self.timer = QTimer(self)
@@ -41,26 +41,26 @@ class AudioWidget(QWidget):
             self.playing = True
 
     def update_duration_and_progress(self):
-        # Update the duration label and progress bar based on the time elapsed during playback
-        elapsed_time = sd.get_stream().time - self.start_time
+        if sd.get_stream().active:
+            elapsed_time = sd.get_stream().time - self.start_time
 
-        # Format the elapsed time and total duration as minutes and seconds
-        elapsed_minutes, elapsed_seconds = divmod(int(elapsed_time), 60)
-        total_minutes, total_seconds = divmod(int(self.total_time), 60)
+            # Format the elapsed time and total duration as minutes and seconds
+            elapsed_minutes, elapsed_seconds = divmod(int(elapsed_time), 60)
+            total_minutes, total_seconds = divmod(int(self.total_time), 60)
 
-        duration_text = f"{elapsed_minutes}:{elapsed_seconds:02d} / {total_minutes}:{total_seconds:02d}"
-        self.duration_label.setText(duration_text)
+            duration_text = f"{elapsed_minutes}:{elapsed_seconds:02d} / {total_minutes}:{total_seconds:02d}"
+            self.duration_label.setText(duration_text)
 
-        # Update the progress bar value
-        progress = int((elapsed_time / self.total_time) * 100)
-        self.progress_bar.setValue(progress)
-
-        if not sd.get_stream().active:
-            # Stop the timer and reset the playing flag when playback is finished
+            # Update the progress bar value
+            progress = int((elapsed_time / self.total_time) * 100)
+            self.progress_bar.setValue(progress)
+        else:
+            # Stop the timer and reset the playing flag when the stream is not active
             self.timer.stop()
             self.playing = False
 
-    def style_ui(self):
+
+    def style_progress_bar(self):
                 # Apply the specified style sheet to the progress bar
         progress_bar_style = """
             QScrollBar:horizontal {
@@ -82,3 +82,6 @@ class AudioWidget(QWidget):
         """
 
         self.progress_bar.setStyleSheet(progress_bar_style)
+
+        # Hide the text on the progress bar
+        self.progress_bar.setTextVisible(False)

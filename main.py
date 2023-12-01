@@ -19,6 +19,8 @@ import matplotlib
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from mplwidget import MplWidget
 from audioWidget import AudioWidget
+import sounddevice as sd
+
 
 matplotlib.use("QtAgg")
 
@@ -39,6 +41,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal = None  # The current signal
         self.activation = 'uniform'  # the mode of operation (default)
         self.current_slider = None
+        self.ecg_flag = False 
 
     def rectangle_window(self, amplitude, N):
         return amplitude * signal.windows.boxcar(N)
@@ -164,6 +167,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.our_signal.fft_data[0][start:end],
                 current_segment_smooth_window, pen={'color': 'b', 'width': 2})
 
+
     def segment(self, start, end, sparse=False):
         if sparse:
             start_freq = self.our_signal.fft_data[0][start]
@@ -172,6 +176,7 @@ class MainWindow(QtWidgets.QMainWindow):
         end_freq = self.our_signal.fft_data[0][end]
         v_line = pg.InfiniteLine(pos=end_freq, angle=90, movable=False)
         self.new_window.smoothingGraph1.addItem(v_line)
+
 
     def fill_smooth_segments(self, i):
         start, end = self.our_signal.slice_indices[i]
@@ -210,7 +215,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.graph_load_ui()
 
         # Other Attributes
-        self.speed = 50
+        self.speed = 200
         self.end_ind = 50
         self.timer = QTimer()
         self.timer.setInterval(50)
@@ -220,11 +225,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.zoomIn.clicked.connect(self.zoom_in)
         self.ui.zoomOut.clicked.connect(self.zoom_out)
         self.ui.resetButton.clicked.connect(self.reset)
-        self.ui.playAudio1.clicked.connect(self.display_audio)
+        self.ui.playAudio1.clicked.connect(self.toggle_audio)
 
         # Set speed slider properties
         self.speedSlider.setMinimum(0)
-        self.speedSlider.setMaximum(200)
+        self.speedSlider.setMaximum(500)
         self.speedSlider.setSingleStep(5)
         self.speedSlider.setValue(self.speed)
         self.speedSlider.valueChanged.connect(self.change_speed)
@@ -239,11 +244,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.handle_combobox_selection)
         self.ui.spectogramCheck.stateChanged.connect(self.show_spectrogram)
 
-    def set_icon(self, icon_path):
+
+    def set_icon(self,widget_name, icon_path):
         # Load an icon
         icon = QIcon(icon_path)
         # Set the icon for the button
-        self.playPause.setIcon(icon)
+        widget_name.setIcon(icon)
+
 
     def graph_load_ui(self):
 
@@ -273,7 +280,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.modeList.addItem("Uniform Range")
         self.ui.modeList.addItem("Musical Instruments")
         self.ui.modeList.addItem("Animal Sounds")
-        self.ui.modeList.addItem("ECG Abnormalities")
+        self.ui.modeList.addItem("ECG Abnormalities")
+
 
     def show_spectrogram(self, state):
         if state == 2:  # Checked state
@@ -292,6 +300,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram1)
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram2)
 
+
     def browse(self):
         file_filter = "Raw Data (*.csv *.wav *.mp3)"
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -300,6 +309,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if file_path:
             file_name = os.path.basename(file_path)
             self.open_file(file_path, file_name)
+
 
     def open_file(self, path: str, file_name: str):
         data = []
@@ -315,10 +325,12 @@ class MainWindow(QtWidgets.QMainWindow):
             time = np.linspace(0, duration, len(data))
 
         elif filetype == "csv":
-            data_reader = pd.read_csv(
-                path, delimiter=',', skiprows=1)  # Skip header row
-            time = data_reader.iloc[:, 0].astype(float).tolist()
-            data = data_reader.iloc[:, 1].astype(float).tolist()
+            self.ecg_flag = True
+            data_reader = pd.read_csv(path, delimiter=',', skiprows=1)  # Skip header row
+            time = np.array(data_reader.iloc[:, 0].astype(float).tolist())
+            data = np.array(data_reader.iloc[:, 1].astype(float).tolist())
+            sample_rate = 1 / np.mean(np.diff(time))
+            self.speed = 3
 
         self.our_signal = Signal(file_name[:-4])
         self.our_signal.data = data
@@ -331,7 +343,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         x, y = self.get_fft_values(sample_interval, len(self.our_signal.data))
         self.our_signal.fft_data = [x, y]
+        self.our_signal.data_after = data
         self.process_signal()
+
 
     def get_fft_values(self, T, N):
         f_values = np.linspace(0.0, 1.0/(2.0*T), N//2)
@@ -345,9 +359,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         return f_values, fft_values
 
-    def reconstruct_signal(magnitude_values, phase_values):
+
+    def reconstruct_signal(self):
         # Combine magnitude and phase to create a complex array
-        complex_values = magnitude_values * np.exp(1j * phase_values)
+        complex_values = self.our_signal.fft_data * np.exp(1j * self.our_signal.phase)
 
         # Inverse FFT (iFFT)
         reconstructed_signal = np.fft.ifft(complex_values)
@@ -355,23 +370,25 @@ class MainWindow(QtWidgets.QMainWindow):
         # Extract the real part of the signal
         return np.real(reconstructed_signal)
 
+
     def process_signal(self):
-        # self.display_audio(signal)
         self.handle_selected_mode()
         self.split_data()
         self.plot_signal()
         self.plot_spectrogram()
         # self.display_audio()
 
+
     def plot_signal(self):
         if self.our_signal:
             self.ui.graph1.clear()
             self.ui.graph1.setLabel('left', "Amplitude")
             self.ui.graph1.setLabel('bottom', "Time")
+
             self.our_signal.data_x = self.our_signal.time[:self.end_ind]
-            self.our_signal.data_y = self.our_signal.data[:self.end_ind]
-            self.plot_item = self.ui.graph1.plot(
-                self.our_signal.data_x, self.our_signal.data_y, name=self.our_signal.name, pen=(64, 92, 245))
+            self.our_signal.data_y_before = self.our_signal.data[:self.end_ind]
+            self.plot_item_before = self.ui.graph1.plot(
+                self.our_signal.data_x, self.our_signal.data_y_before, name=self.our_signal.name, pen=(64, 92, 245))
 
             # Check if there is already a legend and remove it
             if self.ui.graph1.plotItem.legend is not None:
@@ -379,39 +396,60 @@ class MainWindow(QtWidgets.QMainWindow):
 
             # Add a legend to the plot
             legend = self.ui.graph1.addLegend()
-            legend.addItem(self.plot_item, name=self.our_signal.name)
+            legend.addItem(self.plot_item_before, name=self.our_signal.name)
+################################################################################################
 
-            self.set_icon("icons/pause-square.png")
+            self.our_signal.data_y_after = self.our_signal.data_after[:self.end_ind]
+            self.plot_item_after = self.ui.graph2.plot(
+                self.our_signal.data_x, self.our_signal.data_y_after, name=self.our_signal.name, pen=(64, 92, 245))
+
+            # Check if there is already a legend and remove it
+            if self.ui.graph2.plotItem.legend is not None:
+                self.ui.graph2.plotItem.legend.clear()
+
+            # Add a legend to the plot
+            legend = self.ui.graph2.addLegend()
+            legend.addItem(self.plot_item_after, name=self.our_signal.name)
+
+            
+            self.set_icon(self.ui.playPause,"icons/pause-square.png")
             self.ui.playPause.setText("Pause")
 
         if not self.timer.isActive():
             self.timer.start(50)
 
+
     def updating_graphs(self):
-        data, time = self.our_signal.data, self.our_signal.time
+        data_before,data_after, time = self.our_signal.data, self.our_signal.data_after, self.our_signal.time
 
         data_X = time[:self.end_ind + self.speed]
-        data_Y = data[:self.end_ind + self.speed]
+        data_Y_before = data_before[:self.end_ind + self.speed]
+        data_Y_after = data_after[:self.end_ind + self.speed]
+
         self.end_ind += self.speed
 
         if (data_X[-1] < 1):
             self.ui.graph1.setXRange(0, 1)
+            self.ui.graph2.setXRange(0, 1)
         else:
             self.ui.graph1.setXRange(data_X[-1] - 1, data_X[-1])
+            self.ui.graph2.setXRange(data_X[-1] - 1, data_X[-1])
 
-        self.plot_item.setData(data_X, data_Y, visible=True)
+        self.plot_item_before.setData(data_X, data_Y_before, visible=True)
+        self.plot_item_after.setData(data_X, data_Y_after, visible=True)
+
 
     def play_pause(self):
-        if self.our_signal:
-            if self.timer.isActive():
-                self.timer.stop()
-                self.set_icon("icons/play-square-svgrepo-com.png")
-                self.ui.playPause.setText("Play")
-                # self.ui.graph1.autoRange()
-            else:
-                self.set_icon("icons/pause-square.png")
-                self.ui.playPause.setText("Pause")
-                self.timer.start()
+            if self.our_signal:
+                if self.timer.isActive():
+                    self.timer.stop()
+                    self.set_icon(self.ui.playPause,"icons/play-square-svgrepo-com.png")
+                    self.ui.playPause.setText("Play")
+                    # self.ui.graph1.autoRange()
+                else:
+                    self.set_icon(self.ui.playPause,"icons/pause-square.png")
+                    self.ui.playPause.setText("Pause")
+                    self.timer.start()
 
     def zoom_in(self):
         view_box = self.graph1.plotItem.getViewBox()
@@ -438,16 +476,30 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if result == QMessageBox.StandardButton.Ok:
             self.ui.graph1.clear()
+            self.spectrogram_widget1.clear()
+
 
     def plot_spectrogram(self):
         if self.our_signal:
-            self.spectrogram_widget1.plot_spectrogram(
-                self.our_signal.data, self.our_signal.sr, title='Spectrogram', x_label='Time', y_label='Frequency')
+            if self.ecg_flag:
+                # plot spectrogram of ecg data 
+                self.spectrogram_widget1.plot_ecg_spectrogram(self.our_signal.data,self.our_signal.time)
 
-    def display_audio(self):
+            # plot spectrogram of audio data 
+            self.spectrogram_widget1.plot_audio_spectrogram(self.our_signal.data, self.our_signal.sr)
+
+
+    def toggle_audio(self):
         if self.our_signal:
-            self.audio_widget.play_audio(
-                self.our_signal.data, self.our_signal.sr)
+            if not self.audio_widget.playing:
+                self.audio_widget.play_audio(self.our_signal.data, self.our_signal.sr)
+                self.ui.playAudio1.setText("Pause Audio")
+                self.set_icon(self.ui.playAudio1,"icons/pause-square.png")
+            else:
+                sd.stop()
+                self.ui.playAudio1.setText("Play Audio")
+                self.set_icon(self.ui.playAudio1,"icons/play-square-svgrepo-com.png")
+
 
     # searching , dont forget it
     def find_closest_index(self, array, target):
@@ -463,6 +515,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return index
         else:
             return index - 1
+
 
     def split_data(self):
         # round the frequencies
@@ -500,6 +553,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 end_index = self.find_closest_index(frequencies, end)
                 self.our_signal.slice_indices.append((start_index, end_index))
 
+
     def add_sliders(self, num_sliders):
         layout = self.ui.slidersWidget.layout()
         if layout:
@@ -512,6 +566,7 @@ class MainWindow(QtWidgets.QMainWindow):
             slider.setRange(1, 200)
             layout.addWidget(slider)
 
+
     def handle_combobox_selection(self):
         current_index = self.ui.modeList.currentIndex()
         num_sliders = 10 if current_index == 0 else 4
@@ -520,6 +575,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for slider in sliders:
             slider.valueChanged.connect(
                 lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
+
 
     def editing(self, slider_value, slidernum):
         start, end = self.our_signal.slice_indices[slidernum]
@@ -535,6 +591,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal.fft_data[1][start:end] = result
         self.our_signal.smooth_seg_amp[slidernum] = (factor_of_multiplication)
         self.our_signal.each_slider_reference[slidernum] = slider_value
+
+        data_after = self.reconstruct_signal()
+        self.our_signal.data_after = data_after[1]
 
     def update_after_windowing(self):
         data = self.reconstruct_signal(
