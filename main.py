@@ -20,6 +20,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from mplwidget import MplWidget
 from audioWidget import AudioWidget
 import sounddevice as sd
+from functools import partial
 
 
 matplotlib.use("QtAgg")
@@ -228,8 +229,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.zoomIn.clicked.connect(self.zoom_in)
         self.ui.zoomOut.clicked.connect(self.zoom_out)
         self.ui.resetButton.clicked.connect(self.reset)
-        self.ui.playAudio1.clicked.connect(self.toggle_audio_before)
-        self.ui.playAudio2.clicked.connect(self.toggle_audio_after)
+        self.ui.playAudio1.clicked.connect(partial(self.toggle_audio, self.audio_widget1, self.ui.playAudio1, "icons/pause-square.png"))
+        self.ui.playAudio2.clicked.connect(partial(self.toggle_audio, self.audio_widget2, self.ui.playAudio2, "icons/pause-square.png"))
 
 
         # Set speed slider properties
@@ -498,33 +499,19 @@ class MainWindow(QtWidgets.QMainWindow):
             
             self.spectrogram_widget2.plot_audio_spectrogram(
                 self.our_signal.data_after, self.our_signal.sr)
+            
 
-    def toggle_audio_before(self):
+    def toggle_audio(self, audio_widget, play_button, icon_path):
         if self.our_signal:
-            if not self.audio_widget1.playing:
-                self.audio_widget1.play_audio(
-                    self.our_signal.data, self.our_signal.sr)
-                self.ui.playAudio1.setText("Pause Audio")
-                self.set_icon(self.ui.playAudio1, "icons/pause-square.png")
+            if not audio_widget.playing:
+                audio_widget.play_audio(self.our_signal.data, self.our_signal.sr)
+                play_button.setText("Pause Audio")
             else:
                 sd.stop()
-                self.ui.playAudio1.setText("Play Audio")
-                self.set_icon(self.ui.playAudio1,
-                              "icons/play-square-svgrepo-com.png")
-                
-    def toggle_audio_after(self):  
-            if self.our_signal:             
-                # cusmization for audio after modification 
-                if not self.audio_widget2.playing:
-                    self.audio_widget2.play_audio(
-                        self.our_signal.data_after, self.our_signal.sr)
-                    self.ui.playAudio2.setText("Pause Audio")
-                    self.set_icon(self.ui.playAudio2, "icons/pause-square.png")
-                else:
-                    sd.stop()
-                    self.ui.playAudio2.setText("Play Audio")
-                    self.set_icon(self.ui.playAudio2,
-                                "icons/play-square-svgrepo-com.png")
+                play_button.setText("Play Audio")
+
+            icon_path = "icons/play-square-svgrepo-com.png" if audio_widget.playing else icon_path
+            self.set_icon(play_button, icon_path)
 
     # searching , dont forget it
 
