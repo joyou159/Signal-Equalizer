@@ -360,15 +360,23 @@ class MainWindow(QtWidgets.QMainWindow):
         return f_values, fft_values
 
 
-    def reconstruct_signal(self):
-        # Combine magnitude and phase to create a complex array
-        complex_values = self.our_signal.fft_data * np.exp(1j * self.our_signal.phase)
+    def get_inverse_fft_values(self, T, N, f_values, fft_values):
+            # Create an array with the same shape as the original signal
+            original_signal = np.zeros(N, dtype=complex)
 
-        # Inverse FFT (iFFT)
-        reconstructed_signal = np.fft.ifft(complex_values)
+            # Set the values for which you have FFT coefficients
+            original_signal[:N//2] = fft_values / (2/N)
 
-        # Extract the real part of the signal
-        return np.real(reconstructed_signal)
+            # Set the conjugate values for the other half (due to symmetry)
+            original_signal[N//2:] = np.conjugate(fft_values[::-1])
+
+            # Compute the inverse FFT
+            inverse_transformed_values = np.fft.ifft(original_signal)
+
+            # Assuming self.our_signal.data was the original signal
+            recovered_data = np.real(inverse_transformed_values)
+
+            return recovered_data
 
 
     def process_signal(self):
@@ -592,8 +600,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal.smooth_seg_amp[slidernum] = (factor_of_multiplication)
         self.our_signal.each_slider_reference[slidernum] = slider_value
 
-        data_after = self.reconstruct_signal()
-        self.our_signal.data_after = data_after[1]
+        self.our_signal.data_after = self.get_inverse_fft_values(
+            1/self.our_signal.sr, len(self.our_signal.data), self.our_signal.fft_data[0], self.our_signal.fft_data[1])
+
 
     def update_after_windowing(self):
         data = self.reconstruct_signal(
