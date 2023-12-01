@@ -506,12 +506,11 @@ class MainWindow(QtWidgets.QMainWindow):
             if not audio_widget.playing:
                 audio_widget.play_audio(self.our_signal.data, self.our_signal.sr)
                 play_button.setText("Pause Audio")
+                self.set_icon(play_button, icon_path)
             else:
                 sd.stop()
                 play_button.setText("Play Audio")
-
-            icon_path = "icons/play-square-svgrepo-com.png" if audio_widget.playing else icon_path
-            self.set_icon(play_button, icon_path)
+                self.set_icon(play_button, "icons/play-square-svgrepo-com.png")
 
     # searching , dont forget it
 
