@@ -83,7 +83,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.new_window.functionList.setCurrentText(
                 self.our_signal.smoothing_window_name)
 
-
             # spine box of the standard deviation of the gaussian window function
             self.new_window.stdSpinBox.setValue(5)
             self.new_window.stdSpinBox.setRange(0, 1000)
@@ -189,11 +188,7 @@ class MainWindow(QtWidgets.QMainWindow):
             print("initialize")
 
         else:
-            if i == self.current_slider:
-                amp = (max(self.our_signal.fft_data[1][start:end]) /
-                       self.our_signal.smooth_seg_amp[i])
-            else:
-                amp = max(self.our_signal.fft_data[1][start:end])
+            amp = max(self.our_signal.fft_data[1][start:end])
             current_segment_smooth_window = self.custom_window(
                 len(self.our_signal.fft_data[0][start:end]), amp)
             print("update")
@@ -347,9 +342,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal.smoothing_window_name = self.selected_function
         self.our_signal.data_x = []
         self.our_signal.data_y = []
-
+        print(f"sampling freq: {self.our_signal.sr}")
         x, y = self.get_fft_values(sample_interval, len(self.our_signal.data))
         self.our_signal.fft_data = [x, y]
+        print(f'max frequency {(self.our_signal.fft_data[0][-1])}')
         self.our_signal.data_after = data
 
         self.process_signal()
@@ -366,7 +362,6 @@ class MainWindow(QtWidgets.QMainWindow):
         return f_values, fft_values
 
     def get_inverse_fft_values(self):
-
 
         modified_fft_values = np.array(self.our_signal.fft_data[1]) * (len(self.our_signal.data)/2) * \
             np.exp(1j * self.our_signal.phase)
@@ -502,8 +497,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def toggle_audio(self, audio_widget, play_button, icon_path):
         if self.our_signal:
             if not audio_widget.playing:
-                audio_widget.play_audio(
-                    self.our_signal.data, self.our_signal.sr)
+                if audio_widget == self.audio_widget1:
+                    audio_widget.play_audio(
+                        self.our_signal.data, self.our_signal.sr)
+                else:
+                    audio_widget.play_audio(
+                        self.our_signal.data_after, self.our_signal.sr)
                 play_button.setText("Pause Audio")
                 self.set_icon(play_button, icon_path)
             else:
@@ -553,7 +552,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.our_signal.slice_indices.append((start_index, end_index))
 
         elif self.activation == 'animal':
-            ranges = [(400, 420), (600, 700), (1300, 1600), (3000, 4000)]
+            ranges = [(0, 450), (450, 1100), (1100, 3000), (3000, 9000)]
 
             # Assuming self.our_signal.fft_data[0] contains the frequency values
             frequencies = self.our_signal.fft_data[0]
@@ -569,7 +568,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 layout.itemAt(i).widget().setParent(None)
         for i in range(num_sliders):
             slider = QSlider(Qt.Orientation.Vertical)
-            slider.setValue(50)
+            slider.setValue(100)
             slider.setSingleStep(1)
             slider.setRange(1, 200)
             layout.addWidget(slider)
@@ -585,7 +584,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def editing(self, slider_value, slidernum):
 
-
         start, end = self.our_signal.slice_indices[slidernum]
         mag_fft = np.array(self.our_signal.fft_data[1][start:end])
         freq_values = np.array(self.our_signal.fft_data[0][start:end])
@@ -597,8 +595,7 @@ class MainWindow(QtWidgets.QMainWindow):
         result = mag_fft * smooth_data
         self.our_signal.smooth_seg[slidernum] = smooth_data
         self.our_signal.fft_data[1][start:end] = result
-        self.our_signal.smooth_seg_amp[slidernum] = (
-            factor_of_multiplication)
+        self.our_signal.smooth_seg_amp[slidernum] = factor_of_multiplication
         self.our_signal.each_slider_reference[slidernum] = slider_value
 
         self.our_signal.data_after = self.get_inverse_fft_values()
