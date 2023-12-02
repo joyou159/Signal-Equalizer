@@ -203,15 +203,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.onNewWindowClosed()
 
     def on_close_event(self, event):
-        # Override the close event to perform custom actions
-        result = QMessageBox.question(self, "Confirmation", "do you want to save?",
-                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-
-        if result == QMessageBox.StandardButton.Yes:
-            self.save()
-        else:
-            self.new_window.close()
-            self.setEnabled(True)
+        self.setEnabled(True)
 
     def onNewWindowClosed(self):
         self.new_window.close()
@@ -462,19 +454,22 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.set_icon(self.ui.playPause,
                               "icons/play-square-svgrepo-com.png")
                 self.ui.playPause.setText("Play")
-                # self.ui.graph1.autoRange()
             else:
                 self.set_icon(self.ui.playPause, "icons/pause-square.png")
                 self.ui.playPause.setText("Pause")
                 self.timer.start()
 
     def zoom_in(self):
-        view_box = self.graph1.plotItem.getViewBox()
-        view_box.scaleBy((0.5, 1))
+        view_box1 = self.graph1.plotItem.getViewBox()
+        view_box1.scaleBy((0.5, 1))
+        view_box2 = self.graph2.plotItem.getViewBox()
+        view_box2.scaleBy((0.5, 1))
 
     def zoom_out(self):
-        view_box = self.graph1.plotItem.getViewBox()
-        view_box.scaleBy((1.5, 1))
+        view_box1 = self.graph1.plotItem.getViewBox()
+        view_box1.scaleBy((1.5, 1))
+        view_box2 = self.graph1.plotItem.getViewBox()
+        view_box2.scaleBy((1.5, 1))
 
     def change_speed(self):
         if self.our_signal:
@@ -493,7 +488,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if result == QMessageBox.StandardButton.Ok:
             self.ui.graph1.clear()
+            self.ui.graph2clear()
             self.spectrogram_widget1.clear()
+            self.spectrogram_widget2.clear()
+            self.timer.stop()
 
     def plot_spectrogram(self):
         if self.our_signal:
@@ -554,8 +552,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.our_signal.slice_indices[-1] = last_slice
 
         elif self.activation == 'music':
-
-            ranges = [(0, 150), (150, 600), (600, 800), (800, 1200)]
+            # bass , guitar, drum and violin
+            ranges = [(0, 150), (150, 400), (400, 900), (900, 2000)]
 
             # Assuming self.our_signal.fft_data[0] contains the frequency values
             frequencies = self.our_signal.fft_data[0]
@@ -565,6 +563,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.our_signal.slice_indices.append((start_index, end_index))
 
         elif self.activation == 'animal':
+            # dogs, wolf, crow and bat
             ranges = [(0, 450), (450, 1100), (1100, 3000), (3000, 9000)]
 
             # Assuming self.our_signal.fft_data[0] contains the frequency values
@@ -623,7 +622,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.our_signal.data_after = self.get_inverse_fft_values()
 
-        self.spectrogram_widget2.plot_audio_spectrogram(
+        self.spectrogram_widget2.plot_spectrogram(
             self.our_signal.data_after, self.our_signal.sr)
         self.plot_signal()
 
