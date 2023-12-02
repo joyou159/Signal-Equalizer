@@ -73,7 +73,7 @@ This desktop application allows users to open a signal, manipulate its frequency
 
 ## Programme Preview
 
-**Programe demo**
+**Program demo**
 
 <video width="640" height="360" controls>
   <source src="equilizer_prev/prog_preview.mp4" type="video/mp4">
