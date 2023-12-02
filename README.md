@@ -73,21 +73,14 @@ This desktop application allows users to open a signal, manipulate its frequency
 
 ## Programme Preview
 
-**Programe demo**
+**Program demo**
 
-<video width="640" height="360" controls>
-  <source src="equilizer_prev/prog_preview.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+https://github.com/mohamedmosilhy/Signal-Equalizer/assets/115044826/06b47d9a-c958-486a-a701-f9110b11b09b
 
 
 **Equalizer demo**
 
-<video width="640" height="360" controls>
-  <source src="equilizer_prev/equilizer_prev.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
+https://github.com/mohamedmosilhy/Signal-Equalizer/assets/115044826/88899ce1-07e8-4ca5-8ba8-6172c09e0294
 
 
 ## Dependencies
