@@ -82,7 +82,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.new_window.functionList.setCurrentText(
                 self.our_signal.smoothing_window_name)
-            print(self.our_signal.smoothing_window_name)
+
 
             # spine box of the standard deviation of the gaussian window function
             self.new_window.stdSpinBox.setValue(5)
@@ -178,7 +178,6 @@ class MainWindow(QtWidgets.QMainWindow):
         v_line = pg.InfiniteLine(pos=end_freq, angle=90, movable=False)
         self.new_window.smoothingGraph1.addItem(v_line)
 
-
     def fill_smooth_segments(self, i):
         start, end = self.our_signal.slice_indices[i]
         if self.our_signal.smooth_seg_amp == [] or self.current_slider == None:
@@ -200,12 +199,10 @@ class MainWindow(QtWidgets.QMainWindow):
             print("update")
         return current_segment_smooth_window
 
-
     def save(self):
         self.our_signal.smoothing_window_name = self.selected_function
 
         self.onNewWindowClosed()
-
 
     def onNewWindowClosed(self):
         self.new_window.close()
@@ -229,9 +226,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.zoomIn.clicked.connect(self.zoom_in)
         self.ui.zoomOut.clicked.connect(self.zoom_out)
         self.ui.resetButton.clicked.connect(self.reset)
-        self.ui.playAudio1.clicked.connect(partial(self.toggle_audio, self.audio_widget1, self.ui.playAudio1, "icons/pause-square.png"))
-        self.ui.playAudio2.clicked.connect(partial(self.toggle_audio, self.audio_widget2, self.ui.playAudio2, "icons/pause-square.png"))
-
+        self.ui.playAudio1.clicked.connect(partial(
+            self.toggle_audio, self.audio_widget1, self.ui.playAudio1, "icons/pause-square.png"))
+        self.ui.playAudio2.clicked.connect(partial(
+            self.toggle_audio, self.audio_widget2, self.ui.playAudio2, "icons/pause-square.png"))
 
         # Set speed slider properties
         self.speedSlider.setMinimum(0)
@@ -275,7 +273,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Set up layout for the audio1 widget
         audio_layout1 = QVBoxLayout(self.audio1)
         audio_layout1.addWidget(self.audio_widget1)
-    
+
         # Create an instance of the AudioWidget
         self.audio_widget2 = AudioWidget()
 
@@ -363,13 +361,14 @@ class MainWindow(QtWidgets.QMainWindow):
         fft_values = np.fft.fft(self.our_signal.data, N)
 
         self.our_signal.phase = np.angle(fft_values[:N//2])
-
         fft_values = (2/N) * np.abs(fft_values[:N//2])
 
         return f_values, fft_values
 
     def get_inverse_fft_values(self):
-        modified_fft_values = np.array(self.our_signal.fft_data[1]) * len(self.our_signal.data)/2 * \
+
+
+        modified_fft_values = np.array(self.our_signal.fft_data[1]) * (len(self.our_signal.data)/2) * \
             np.exp(1j * self.our_signal.phase)
 
         reconstructed_signal = np.fft.irfft(modified_fft_values)
@@ -496,15 +495,15 @@ class MainWindow(QtWidgets.QMainWindow):
             # plot spectrogram of audio data
             self.spectrogram_widget1.plot_audio_spectrogram(
                 self.our_signal.data, self.our_signal.sr)
-            
+
             self.spectrogram_widget2.plot_audio_spectrogram(
                 self.our_signal.data_after, self.our_signal.sr)
-            
 
     def toggle_audio(self, audio_widget, play_button, icon_path):
         if self.our_signal:
             if not audio_widget.playing:
-                audio_widget.play_audio(self.our_signal.data, self.our_signal.sr)
+                audio_widget.play_audio(
+                    self.our_signal.data, self.our_signal.sr)
                 play_button.setText("Pause Audio")
                 self.set_icon(play_button, icon_path)
             else:
@@ -530,19 +529,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def split_data(self):
         # round the frequencies
-        # self.our_signal.fft_data[0] = [round(
-        #     self.our_signal.fft_data[0][i]) for i in range(len(self.our_signal.fft_data[0]))]
+
         if self.activation == 'uniform':
             num_slices = 10
             excess_elements = len(self.our_signal.fft_data[0]) % num_slices
-            if excess_elements:
-                self.our_signal.data = self.our_signal.data[:-excess_elements]
-                self.our_signal.time = self.our_signal.time[:-excess_elements]
-                self.our_signal.fft_data[0] = self.our_signal.fft_data[0][:-excess_elements]
-                self.our_signal.fft_data[1] = self.our_signal.fft_data[1][:-excess_elements]
             slice_size = int(len(self.our_signal.fft_data[0])/num_slices)
             self.our_signal.slice_indices = [
                 (i * slice_size, (i + 1) * slice_size) for i in range(num_slices)]
+            # throwing off the rest of elements in the last slice.
+            start, end = self.our_signal.slice_indices[-1]
+            last_slice = (start, end+excess_elements)
+            self.our_signal.slice_indices[-1] = last_slice
+
         elif self.activation == 'music':
 
             ranges = [(0, 150), (150, 600), (600, 800), (800, 1200)]
@@ -586,6 +584,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
 
     def editing(self, slider_value, slidernum):
+
+
         start, end = self.our_signal.slice_indices[slidernum]
         mag_fft = np.array(self.our_signal.fft_data[1][start:end])
         freq_values = np.array(self.our_signal.fft_data[0][start:end])
@@ -597,7 +597,8 @@ class MainWindow(QtWidgets.QMainWindow):
         result = mag_fft * smooth_data
         self.our_signal.smooth_seg[slidernum] = smooth_data
         self.our_signal.fft_data[1][start:end] = result
-        self.our_signal.smooth_seg_amp[slidernum] = (factor_of_multiplication)
+        self.our_signal.smooth_seg_amp[slidernum] = (
+            factor_of_multiplication)
         self.our_signal.each_slider_reference[slidernum] = slider_value
 
         self.our_signal.data_after = self.get_inverse_fft_values()
