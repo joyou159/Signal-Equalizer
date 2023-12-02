@@ -1,5 +1,5 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtWidgets import  QVBoxLayout,  QMessageBox,  QSlider
+from PyQt6.QtWidgets import QVBoxLayout,  QMessageBox,  QSlider
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6 import QtWidgets, uic
@@ -300,7 +300,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram1)
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram2)
 
-
     def browse(self):
         file_filter = "Raw Data (*.csv *.wav *.mp3)"
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -309,7 +308,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if file_path:
             file_name = os.path.basename(file_path)
             self.open_file(file_path, file_name)
-
 
     def open_file(self, path: str, file_name: str):
         data = []
@@ -349,7 +347,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.process_signal()
 
-
     def get_fft_values(self, T, N):
         f_values = np.linspace(0.0, 1.0/(2.0*T), N//2)
         # we have considered half of the sampled data points due to symmetry nature of FFT
@@ -361,7 +358,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         return f_values, fft_values
 
-
     def get_inverse_fft_values(self):
 
         modified_fft_values = np.array(self.our_signal.fft_data[1]) * (len(self.our_signal.data)/2) * \
@@ -370,14 +366,12 @@ class MainWindow(QtWidgets.QMainWindow):
         reconstructed_signal = np.fft.irfft(modified_fft_values)
         return reconstructed_signal
 
-
     def process_signal(self):
         self.handle_selected_mode()
         self.split_data()
         self.plot_signal()
         self.plot_spectrogram()
         # self.display_audio()
-
 
     def plot_signal(self):
         if self.our_signal:
@@ -398,7 +392,7 @@ class MainWindow(QtWidgets.QMainWindow):
             legend = self.ui.graph1.addLegend()
             legend.addItem(self.plot_item_before, name=self.our_signal.name)
 
-            # data after modifications in graph 2 
+            # data after modifications in graph 2
             data_y_after = self.our_signal.data_after[:self.end_ind]
             self.plot_item_after = self.ui.graph2.plot(
                 data_x, data_y_after, name=self.our_signal.name, pen=(64, 92, 245))
@@ -416,7 +410,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if not self.timer.isActive():
             self.timer.start(50)
-
 
     def updating_graphs(self):
         data_before, data_after, time = self.our_signal.data, self.our_signal.data_after, self.our_signal.time
@@ -443,7 +436,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plot_item_after.setData(
                 data_X[:-self.excess], data_Y_after, visible=True)
 
-
     def play_pause(self):
         if self.our_signal:
             if self.timer.isActive():
@@ -456,7 +448,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.set_icon(self.ui.playPause, "icons/pause-square.png")
                 self.ui.playPause.setText("Pause")
                 self.timer.start()
-
 
     def zoom_in(self):
         view_box = self.graph1.plotItem.getViewBox()
@@ -485,7 +476,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.graph1.clear()
             self.spectrogram_widget1.clear()
 
-
     def plot_spectrogram(self):
         if self.our_signal:
             if self.ecg_flag:
@@ -500,7 +490,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.spectrogram_widget2.plot_audio_spectrogram(
                 self.our_signal.data_after, self.our_signal.sr)
 
-
     def toggle_audio(self, audio_widget, play_button, icon_path):
         if self.our_signal:
             if not audio_widget.playing:
@@ -508,12 +497,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 if audio_widget == self.audio_widget1:
                     audio_widget.play_audio(
                         self.our_signal.data, self.our_signal.sr)
-                    
+
                 # play audio after modifications
                 else:
                     audio_widget.play_audio(
                         self.our_signal.data_after, self.our_signal.sr)
-                    
+
                 play_button.setText("Pause Audio")
                 self.set_icon(play_button, icon_path)
             else:
@@ -521,8 +510,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 play_button.setText("Play Audio")
                 self.set_icon(play_button, "icons/play-square-svgrepo-com.png")
 
-
     # searching , dont forget it
+
     def find_closest_index(self, array, target):
         """Find the index of the closest value in the array to the target."""
         index = bisect.bisect_left(array, target)
@@ -536,7 +525,6 @@ class MainWindow(QtWidgets.QMainWindow):
             return index
         else:
             return index - 1
-
 
     def split_data(self):
         # round the frequencies
@@ -573,6 +561,15 @@ class MainWindow(QtWidgets.QMainWindow):
                 end_index = self.find_closest_index(frequencies, end)
                 self.our_signal.slice_indices.append((start_index, end_index))
 
+        elif self.activation == 'ecg':
+            ranges = [(0, 35), (48, 52), (95, 155)]
+
+            # Assuming self.our_signal.fft_data[0] contains the frequency values
+            frequencies = self.our_signal.fft_data[0]
+            for start, end in ranges:
+                start_index = self.find_closest_index(frequencies, start)
+                end_index = self.find_closest_index(frequencies, end)
+                self.our_signal.slice_indices.append((start_index, end_index))
 
     def add_sliders(self, num_sliders):
         layout = self.ui.slidersWidget.layout()
@@ -586,7 +583,6 @@ class MainWindow(QtWidgets.QMainWindow):
             slider.setRange(1, 200)
             layout.addWidget(slider)
 
-
     def handle_combobox_selection(self):
         current_index = self.ui.modeList.currentIndex()
         num_sliders = 10 if current_index == 0 else 4
@@ -595,7 +591,6 @@ class MainWindow(QtWidgets.QMainWindow):
         for slider in sliders:
             slider.valueChanged.connect(
                 lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
-
 
     def editing(self, slider_value, slidernum):
 
