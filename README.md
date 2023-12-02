@@ -71,6 +71,24 @@ This desktop application allows users to open a signal, manipulate its frequency
    - The application provides real-time visual feedback on signal changes.
    - Use play/pause, speed control, and other playback options for interactive exploration.
 
+## Programme Preview
+
+**Programe demo**
+
+<video width="640" height="360" controls>
+  <source src="equilizer_prev/prog_preview.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+
+**Equalizer demo**
+
+<video width="640" height="360" controls>
+  <source src="equilizer_prev/equilizer_prev.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+
 
 ## Dependencies
 
@@ -93,6 +111,3 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
-
-
-
