@@ -23,4 +23,4 @@ class Signal:
 
         self.smooth_seg = []
         self.smooth_seg_amp = []
-        self.each_slider_reference = np.repeat(50, 10)  # initially
+        self.each_slider_reference = np.repeat(100, 10)  # initially
