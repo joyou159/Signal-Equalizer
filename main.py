@@ -398,7 +398,7 @@ class MainWindow(QtWidgets.QMainWindow):
             legend = self.ui.graph1.addLegend()
             legend.addItem(self.plot_item_before, name=self.our_signal.name)
 
-
+            # data after modifications in graph 2 
             data_y_after = self.our_signal.data_after[:self.end_ind]
             self.plot_item_after = self.ui.graph2.plot(
                 data_x, data_y_after, name=self.our_signal.name, pen=(64, 92, 245))
