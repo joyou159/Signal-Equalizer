@@ -31,7 +31,7 @@ class MplWidget(QWidget):
         self.canvas.draw()
 
 
-    def plot_audio_spectrogram(self, audio_data, sample_rate, title='Spectrogram', x_label='Time', y_label='Frequency'):
+    def plot_spectrogram(self, audio_data, sample_rate, title='Spectrogram', x_label='Time', y_label='Frequency'):
         self.canvas.axes.clear()
         spectrogram = librosa.amplitude_to_db(np.abs(librosa.stft(audio_data)), ref=np.max)
         librosa.display.specshow(spectrogram, sr=sample_rate, x_axis='time', y_axis='log', ax=self.canvas.axes)

@@ -40,6 +40,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.activation = 'uniform'  # the mode of operation (default)
         self.current_slider = None
         self.ecg_flag = False
+        self.pause_flag = False
         self.excess = None
 
     def rectangle_window(self, amplitude, N):
@@ -62,6 +63,7 @@ class MainWindow(QtWidgets.QMainWindow):
         msg_box.exec()
 
     def openNewWindow(self):
+       
         if self.our_signal == None:
             self.show_error_message("Please select a signal first!")
 
@@ -93,6 +95,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.new_window.save.clicked.connect(self.save)
 
+            self.new_window.setWindowTitle("Smoothing window")
             self.new_window.show()
             self.new_window.destroyed.connect(self.onNewWindowClosed)
 
@@ -106,6 +109,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.activation = 'animal'
         else:
             self.activation = 'ecg'
+
 
     def handle_selected_function(self):
         # why ?? (what about smoothing_window_name in the signal class)
@@ -376,6 +380,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def plot_signal(self):
         if self.our_signal:
             self.ui.graph1.clear()
+            self.ui.graph2.clear()
             # self.ui.graph1.setLabel('left', "Amplitude")
             # self.ui.graph1.setLabel('bottom', "Time")
 
@@ -408,8 +413,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.set_icon(self.ui.playPause, "icons/pause-square.png")
             self.ui.playPause.setText("Pause")
 
-        if not self.timer.isActive():
-            self.timer.start(50)
+        if not self.pause_flag:
+            if not self.timer.isActive():
+                self.timer.start(50)
 
     def updating_graphs(self):
         data_before, data_after, time = self.our_signal.data, self.our_signal.data_after, self.our_signal.time
@@ -476,19 +482,15 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.graph1.clear()
             self.spectrogram_widget1.clear()
 
+
     def plot_spectrogram(self):
         if self.our_signal:
-            if self.ecg_flag:
-                # plot spectrogram of ecg data
-                self.spectrogram_widget1.plot_ecg_spectrogram(
-                    self.our_signal.data, self.our_signal.time)
+                self.spectrogram_widget1.plot_spectrogram(
+                    self.our_signal.data, self.our_signal.sr)
 
-            # plot spectrogram of audio data
-            self.spectrogram_widget1.plot_audio_spectrogram(
-                self.our_signal.data, self.our_signal.sr)
+                self.spectrogram_widget2.plot_spectrogram(
+                    self.our_signal.data_after, self.our_signal.sr)
 
-            self.spectrogram_widget2.plot_audio_spectrogram(
-                self.our_signal.data_after, self.our_signal.sr)
 
     def toggle_audio(self, audio_widget, play_button, icon_path):
         if self.our_signal:
@@ -562,7 +564,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.our_signal.slice_indices.append((start_index, end_index))
 
         elif self.activation == 'ecg':
-            ranges = [(0, 35), (48, 52), (95, 155)]
+            ranges = [(0, 35), (48, 52), (55,94), (95, 155)]
 
             # Assuming self.our_signal.fft_data[0] contains the frequency values
             frequencies = self.our_signal.fft_data[0]
@@ -570,6 +572,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 start_index = self.find_closest_index(frequencies, start)
                 end_index = self.find_closest_index(frequencies, end)
                 self.our_signal.slice_indices.append((start_index, end_index))
+
 
     def add_sliders(self, num_sliders):
         layout = self.ui.slidersWidget.layout()
@@ -583,6 +586,7 @@ class MainWindow(QtWidgets.QMainWindow):
             slider.setRange(1, 200)
             layout.addWidget(slider)
 
+
     def handle_combobox_selection(self):
         current_index = self.ui.modeList.currentIndex()
         num_sliders = 10 if current_index == 0 else 4
@@ -591,9 +595,10 @@ class MainWindow(QtWidgets.QMainWindow):
         for slider in sliders:
             slider.valueChanged.connect(
                 lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
+            
 
     def editing(self, slider_value, slidernum):
-
+        self.pause_flag = True
         start, end = self.our_signal.slice_indices[slidernum]
         mag_fft = np.array(self.our_signal.fft_data[1][start:end])
         freq_values = np.array(self.our_signal.fft_data[0][start:end])
@@ -612,6 +617,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.spectrogram_widget2.plot_audio_spectrogram(
             self.our_signal.data_after, self.our_signal.sr)
+        self.plot_signal()
+
 
 
 def main():
