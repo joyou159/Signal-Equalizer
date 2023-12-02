@@ -63,7 +63,7 @@ class MainWindow(QtWidgets.QMainWindow):
         msg_box.exec()
 
     def openNewWindow(self):
-       
+
         if self.our_signal == None:
             self.show_error_message("Please select a signal first!")
 
@@ -81,6 +81,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.new_window.functionList.setCurrentText(
                 self.our_signal.smoothing_window_name)
+
+            # Connect the close event to a custom function
+            self.new_window.closeEvent = self.on_close_event
 
             # spine box of the standard deviation of the gaussian window function
             self.new_window.stdSpinBox.setValue(5)
@@ -109,7 +112,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.activation = 'animal'
         else:
             self.activation = 'ecg'
-
 
     def handle_selected_function(self):
         # why ?? (what about smoothing_window_name in the signal class)
@@ -199,6 +201,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal.smoothing_window_name = self.selected_function
 
         self.onNewWindowClosed()
+
+    def on_close_event(self, event):
+        # Override the close event to perform custom actions
+        result = QMessageBox.question(self, "Confirmation", "do you want to save?",
+                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+        if result == QMessageBox.StandardButton.Yes:
+            self.save()
+        else:
+            self.new_window.close()
+            self.setEnabled(True)
 
     def onNewWindowClosed(self):
         self.new_window.close()
@@ -482,15 +495,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.graph1.clear()
             self.spectrogram_widget1.clear()
 
-
     def plot_spectrogram(self):
         if self.our_signal:
-                self.spectrogram_widget1.plot_spectrogram(
-                    self.our_signal.data, self.our_signal.sr)
+            self.spectrogram_widget1.plot_spectrogram(
+                self.our_signal.data, self.our_signal.sr)
 
-                self.spectrogram_widget2.plot_spectrogram(
-                    self.our_signal.data_after, self.our_signal.sr)
-
+            self.spectrogram_widget2.plot_spectrogram(
+                self.our_signal.data_after, self.our_signal.sr)
 
     def toggle_audio(self, audio_widget, play_button, icon_path):
         if self.our_signal:
@@ -564,7 +575,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.our_signal.slice_indices.append((start_index, end_index))
 
         elif self.activation == 'ecg':
-            ranges = [(0, 35), (48, 52), (55,94), (95, 155)]
+            ranges = [(0, 35), (48, 52), (55, 94), (95, 155)]
 
             # Assuming self.our_signal.fft_data[0] contains the frequency values
             frequencies = self.our_signal.fft_data[0]
@@ -572,7 +583,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 start_index = self.find_closest_index(frequencies, start)
                 end_index = self.find_closest_index(frequencies, end)
                 self.our_signal.slice_indices.append((start_index, end_index))
-
 
     def add_sliders(self, num_sliders):
         layout = self.ui.slidersWidget.layout()
@@ -586,7 +596,6 @@ class MainWindow(QtWidgets.QMainWindow):
             slider.setRange(1, 200)
             layout.addWidget(slider)
 
-
     def handle_combobox_selection(self):
         current_index = self.ui.modeList.currentIndex()
         num_sliders = 10 if current_index == 0 else 4
@@ -595,7 +604,6 @@ class MainWindow(QtWidgets.QMainWindow):
         for slider in sliders:
             slider.valueChanged.connect(
                 lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
-            
 
     def editing(self, slider_value, slidernum):
         self.pause_flag = True
@@ -618,7 +626,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.spectrogram_widget2.plot_audio_spectrogram(
             self.our_signal.data_after, self.our_signal.sr)
         self.plot_signal()
-
 
 
 def main():
