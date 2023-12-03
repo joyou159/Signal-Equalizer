@@ -207,6 +207,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def save(self):
         self.our_signal.smoothing_window_name = self.selected_function
+        self.ui.slidersWidget.setEnabled(True)
+
 
         self.onNewWindowClosed()
 
@@ -377,6 +379,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.process_signal()
         
     def process_signal(self):
+        self.ui.slidersWidget.setEnabled(False)
+
         self.handle_selected_mode()
         self.split_data()
         self.plot_signal()
@@ -577,37 +581,34 @@ class MainWindow(QtWidgets.QMainWindow):
         self.add_sliders(num_sliders)
         sliders = self.ui.slidersWidget.findChildren(QSlider)
         for slider in sliders:
-            if not self.our_signal.smooth_seg:
-                    # Show error message
-                print("Error: smooth_seg list is empty!")
-            else:
-                slider.valueChanged.connect(
-                    lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum)
-    )
+            slider.valueChanged.connect(
+                    lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
+
+        
 
     def editing(self, slider_value, slidernum):
-        self.pause_flag = True
-        start, end = self.our_signal.slice_indices[slidernum]
-        mag_fft = np.array(self.our_signal.fft_data[1][start:end])
-        freq_values = np.array(self.our_signal.fft_data[0][start:end])
-        self.current_slider = slidernum
-        factor_of_multiplication = slider_value / \
-            self.our_signal.each_slider_reference[slidernum]
-        smooth_data = (factor_of_multiplication) * np.array(
-            self.our_signal.smooth_seg[slidernum] / self.our_signal.smooth_seg_amp[slidernum])
-        result = mag_fft * smooth_data
-        self.our_signal.smooth_seg[slidernum] = smooth_data
-        self.our_signal.fft_data[1][start:end] = result
-        self.our_signal.smooth_seg_amp[slidernum] = factor_of_multiplication
-        self.our_signal.each_slider_reference[slidernum] = slider_value
+        if self.our_signal.smooth_seg:
+            self.ui.slidersWidget.setEnabled(True)
+            self.pause_flag = True
+            start, end = self.our_signal.slice_indices[slidernum]
+            mag_fft = np.array(self.our_signal.fft_data[1][start:end])
+            freq_values = np.array(self.our_signal.fft_data[0][start:end])
+            self.current_slider = slidernum
+            factor_of_multiplication = slider_value / \
+                self.our_signal.each_slider_reference[slidernum]
+            smooth_data = (factor_of_multiplication) * np.array(
+                self.our_signal.smooth_seg[slidernum] / self.our_signal.smooth_seg_amp[slidernum])
+            result = mag_fft * smooth_data
+            self.our_signal.smooth_seg[slidernum] = smooth_data
+            self.our_signal.fft_data[1][start:end] = result
+            self.our_signal.smooth_seg_amp[slidernum] = factor_of_multiplication
+            self.our_signal.each_slider_reference[slidernum] = slider_value
 
-        self.our_signal.data_after = self.get_inverse_fft_values()
+            self.our_signal.data_after = self.get_inverse_fft_values()
 
-        self.spectrogram_widget2.plot_spectrogram(
-            self.our_signal.data_after, self.our_signal.sr)
-        self.plot_signal()
-        
-        
+            self.spectrogram_widget2.plot_spectrogram(
+                self.our_signal.data_after, self.our_signal.sr)
+            self.plot_signal()
 
         """GRAPH CONTROLS"""    
         
