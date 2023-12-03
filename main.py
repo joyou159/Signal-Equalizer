@@ -380,12 +380,17 @@ class MainWindow(QtWidgets.QMainWindow):
         
     def process_signal(self):
         self.ui.slidersWidget.setEnabled(False)
-
+        self.reset_sliders()
         self.handle_selected_mode()
         self.split_data()
         self.plot_signal()
         self.plot_spectrogram()
                 
+    def reset_sliders(self):
+        sliders = self.ui.slidersWidget.findChildren(QSlider)
+        for i,slider in enumerate(sliders):
+            slider.setValue(self.our_signal.each_slider_reference[i])
+            
         
         """SPLIT DATA"""
     def find_closest_index(self, array, target):
