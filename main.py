@@ -380,8 +380,8 @@ class MainWindow(QtWidgets.QMainWindow):
         
     def process_signal(self):
         self.ui.slidersWidget.setEnabled(False)
-        self.reset_sliders()
         self.handle_selected_mode()
+        self.reset_sliders()
         self.split_data()
         self.plot_signal()
         self.plot_spectrogram()
@@ -662,7 +662,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.spectrogram_widget1.clear()
             self.spectrogram_widget2.clear()
             self.timer.stop()
-            self.end_ind = 50
+            
+            self.initialize_sig_attr()
             self.open_file(self.file_path,self.file_name)
 
 def main():
