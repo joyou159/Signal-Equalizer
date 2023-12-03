@@ -35,6 +35,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.init_ui()
+        self.file_path= None
+        self.file_filter = None
+        self.file_name = None
         self.selected_function = "Rectangle"  # window function
         self.our_signal = None  # The current signal
         self.activation = 'uniform'  # the mode of operation (default)
@@ -127,24 +130,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.new_window.stdSpinBox.hide()
             self.new_window.std.hide()
 
+
         self.smoothing_real_time()
-
-    def custom_window(self, samples, amplitude):
-        if self.selected_function == 'Rectangle':
-            smooth_data = self.rectangle_window(
-                amplitude, samples)
-
-        elif self.selected_function == 'Hamming':
-            smooth_data = self.hamming_window(samples, amplitude)
-
-        elif self.selected_function == 'Hanning':
-            smooth_data = self.hanning_window(samples, amplitude)
-
-        elif self.selected_function == 'Gaussian':
-            std = int(self.new_window.stdSpinBox.text())
-            smooth_data = self.gaussian_window(samples, amplitude, std)
-        return smooth_data
-
+        
     def smoothing_real_time(self):
         _, last_item = self.our_signal.slice_indices[-1]
         self.new_window.smoothingGraph1.clear()
@@ -170,7 +158,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.new_window.smoothingGraph1.plot(
                 self.our_signal.fft_data[0][start:end],
                 current_segment_smooth_window, pen={'color': 'b', 'width': 2})
-
+    
+    
     def segment(self, start, end, sparse=False):
         if sparse:
             start_freq = self.our_signal.fft_data[0][start]
@@ -179,6 +168,7 @@ class MainWindow(QtWidgets.QMainWindow):
         end_freq = self.our_signal.fft_data[0][end]
         v_line = pg.InfiniteLine(pos=end_freq, angle=90, movable=False)
         self.new_window.smoothingGraph1.addItem(v_line)
+
 
     def fill_smooth_segments(self, i):
         start, end = self.our_signal.slice_indices[i]
@@ -196,6 +186,24 @@ class MainWindow(QtWidgets.QMainWindow):
                 len(self.our_signal.fft_data[0][start:end]), amp)
             print("update")
         return current_segment_smooth_window
+
+    def custom_window(self, samples, amplitude):
+        if self.selected_function == 'Rectangle':
+            smooth_data = self.rectangle_window(
+                amplitude, samples)
+
+        elif self.selected_function == 'Hamming':
+            smooth_data = self.hamming_window(samples, amplitude)
+
+        elif self.selected_function == 'Hanning':
+            smooth_data = self.hanning_window(samples, amplitude)
+
+        elif self.selected_function == 'Gaussian':
+            std = int(self.new_window.stdSpinBox.text())
+            smooth_data = self.gaussian_window(samples, amplitude, std)
+        return smooth_data
+
+
 
     def save(self):
         self.our_signal.smoothing_window_name = self.selected_function
@@ -308,15 +316,24 @@ class MainWindow(QtWidgets.QMainWindow):
             # Adjust the layout to make space for the spectrogram graphs
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram1)
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram2)
+            
+            
+    """REINTALIZE PLOTTING ATTRIBUTES EVERYTIME WE OPEN NEW FILE"""
+    def initialize_sig_attr(self):
+        self.speed = 200
+        self.end_ind = 50
+        self.timer = QTimer()
+        self.timer.setInterval(50)
+        self.timer.timeout.connect(self.updating_graphs)
 
     def browse(self):
-        file_filter = "Raw Data (*.csv *.wav *.mp3)"
-        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            None, 'Open Signal File', './', filter=file_filter)
+        self.file_filter = "Raw Data (*.csv *.wav *.mp3)"
+        self.file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            None, 'Open Signal File', './', filter=self.file_filter)
 
-        if file_path:
-            file_name = os.path.basename(file_path)
-            self.open_file(file_path, file_name)
+        if self.file_path:
+            self.file_name = os.path.basename(self.file_path)
+            self.open_file(self.file_path, self.file_name)
 
     def open_file(self, path: str, file_name: str):
         data = []
@@ -339,7 +356,10 @@ class MainWindow(QtWidgets.QMainWindow):
             data = np.array(data_reader.iloc[:, 1].astype(float).tolist())
             sample_rate = 1 / np.mean(np.diff(time))
             self.speed = 3
-
+            
+        #plotting attributes 
+        self.initialize_sig_attr()
+        
         self.our_signal = Signal(file_name[:-4])
         self.our_signal.data = data
         self.our_signal.time = time
@@ -355,6 +375,74 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal.data_after = data
 
         self.process_signal()
+        
+    def process_signal(self):
+        self.handle_selected_mode()
+        self.split_data()
+        self.plot_signal()
+        self.plot_spectrogram()
+                
+        
+        """SPLIT DATA"""
+    def find_closest_index(self, array, target):
+        """Find the index of the closest value in the array to the target."""
+        index = bisect.bisect_left(array, target)
+        if index == 0:
+            return 0
+        if index == len(array):
+            return len(array) - 1
+        before = array[index - 1]
+        after = array[index]
+        if after - target < target - before:
+            return index
+        else:
+            return index - 1
+        
+    def split_data(self):
+            # round the frequencies
+
+        if self.activation == 'uniform':
+            num_slices = 10
+            excess_elements = len(self.our_signal.fft_data[0]) % num_slices
+            slice_size = int(len(self.our_signal.fft_data[0])/num_slices)
+            self.our_signal.slice_indices = [
+                (i * slice_size, (i + 1) * slice_size) for i in range(num_slices)]
+            # throwing off the rest of elements in the last slice.
+            start, end = self.our_signal.slice_indices[-1]
+            last_slice = (start, end+excess_elements)
+            self.our_signal.slice_indices[-1] = last_slice
+
+        elif self.activation == 'music':
+            # bass , guitar, drum and violin
+            ranges = [(0, 150), (150, 400), (400, 900), (900, 2000)]
+
+            # Assuming self.our_signal.fft_data[0] contains the frequency values
+            frequencies = self.our_signal.fft_data[0]
+            for start, end in ranges:
+                start_index = self.find_closest_index(frequencies, start)
+                end_index = self.find_closest_index(frequencies, end)
+                self.our_signal.slice_indices.append((start_index, end_index))
+
+        elif self.activation == 'animal':
+            # dogs, wolf, crow and bat
+            ranges = [(0, 450), (450, 1100), (1100, 3000), (3000, 9000)]
+
+            # Assuming self.our_signal.fft_data[0] contains the frequency values
+            frequencies = self.our_signal.fft_data[0]
+            for start, end in ranges:
+                start_index = self.find_closest_index(frequencies, start)
+                end_index = self.find_closest_index(frequencies, end)
+                self.our_signal.slice_indices.append((start_index, end_index))
+
+        elif self.activation == 'ecg':
+            ranges = [(0, 35), (48, 52), (55, 94), (95, 155)]
+
+            # Assuming self.our_signal.fft_data[0] contains the frequency values
+            frequencies = self.our_signal.fft_data[0]
+            for start, end in ranges:
+                start_index = self.find_closest_index(frequencies, start)
+                end_index = self.find_closest_index(frequencies, end)
+                self.our_signal.slice_indices.append((start_index, end_index))
 
     def get_fft_values(self, T, N):
         f_values = np.linspace(0.0, 1.0/(2.0*T), N//2)
@@ -375,13 +463,7 @@ class MainWindow(QtWidgets.QMainWindow):
         reconstructed_signal = np.fft.irfft(modified_fft_values)
         return reconstructed_signal
 
-    def process_signal(self):
-        self.handle_selected_mode()
-        self.split_data()
-        self.plot_signal()
-        self.plot_spectrogram()
-        # self.display_audio()
-
+    """DATA PLOTTING"""
     def plot_signal(self):
         if self.our_signal:
             self.ui.graph1.clear()
@@ -447,6 +529,88 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plot_item_after.setData(
                 data_X[:-self.excess], data_Y_after, visible=True)
 
+    def plot_spectrogram(self):
+        if self.our_signal:
+            self.spectrogram_widget1.plot_spectrogram(
+                self.our_signal.data, self.our_signal.sr)
+
+            self.spectrogram_widget2.plot_spectrogram(
+                self.our_signal.data_after, self.our_signal.sr)
+
+    def toggle_audio(self, audio_widget, play_button, icon_path):
+        if self.our_signal:
+            if not audio_widget.playing:
+                # play audio before modifications
+                if audio_widget == self.audio_widget1:
+                    audio_widget.play_audio(
+                        self.our_signal.data, self.our_signal.sr)
+
+                # play audio after modifications
+                else:
+                    audio_widget.play_audio(
+                        self.our_signal.data_after, self.our_signal.sr)
+
+                play_button.setText("Pause Audio")
+                self.set_icon(play_button, icon_path)
+            else:
+                sd.stop()
+                play_button.setText("Play Audio")
+                self.set_icon(play_button, "icons/play-square-svgrepo-com.png")
+
+    """HANDLE MODES SLIDERS """
+    
+    def add_sliders(self, num_sliders):
+        layout = self.ui.slidersWidget.layout()
+        if layout:
+            for i in reversed(range(layout.count())):
+                layout.itemAt(i).widget().setParent(None)
+        for i in range(num_sliders):
+            slider = QSlider(Qt.Orientation.Vertical)
+            slider.setValue(100)
+            slider.setSingleStep(1)
+            slider.setRange(1, 200)
+            layout.addWidget(slider)
+
+    def handle_combobox_selection(self):
+        current_index = self.ui.modeList.currentIndex()
+        num_sliders = 10 if current_index == 0 else 4
+        self.add_sliders(num_sliders)
+        sliders = self.ui.slidersWidget.findChildren(QSlider)
+        for slider in sliders:
+            if not self.our_signal.smooth_seg:
+                    # Show error message
+                print("Error: smooth_seg list is empty!")
+            else:
+                slider.valueChanged.connect(
+                    lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum)
+    )
+
+    def editing(self, slider_value, slidernum):
+        self.pause_flag = True
+        start, end = self.our_signal.slice_indices[slidernum]
+        mag_fft = np.array(self.our_signal.fft_data[1][start:end])
+        freq_values = np.array(self.our_signal.fft_data[0][start:end])
+        self.current_slider = slidernum
+        factor_of_multiplication = slider_value / \
+            self.our_signal.each_slider_reference[slidernum]
+        smooth_data = (factor_of_multiplication) * np.array(
+            self.our_signal.smooth_seg[slidernum] / self.our_signal.smooth_seg_amp[slidernum])
+        result = mag_fft * smooth_data
+        self.our_signal.smooth_seg[slidernum] = smooth_data
+        self.our_signal.fft_data[1][start:end] = result
+        self.our_signal.smooth_seg_amp[slidernum] = factor_of_multiplication
+        self.our_signal.each_slider_reference[slidernum] = slider_value
+
+        self.our_signal.data_after = self.get_inverse_fft_values()
+
+        self.spectrogram_widget2.plot_spectrogram(
+            self.our_signal.data_after, self.our_signal.sr)
+        self.plot_signal()
+        
+        
+
+        """GRAPH CONTROLS"""    
+        
     def play_pause(self):
         if self.our_signal:
             if self.timer.isActive():
@@ -488,144 +652,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if result == QMessageBox.StandardButton.Ok:
             self.ui.graph1.clear()
-            self.ui.graph2clear()
+            self.ui.graph2.clear()
             self.spectrogram_widget1.clear()
             self.spectrogram_widget2.clear()
             self.timer.stop()
-
-    def plot_spectrogram(self):
-        if self.our_signal:
-            self.spectrogram_widget1.plot_spectrogram(
-                self.our_signal.data, self.our_signal.sr)
-
-            self.spectrogram_widget2.plot_spectrogram(
-                self.our_signal.data_after, self.our_signal.sr)
-
-    def toggle_audio(self, audio_widget, play_button, icon_path):
-        if self.our_signal:
-            if not audio_widget.playing:
-                # play audio before modifications
-                if audio_widget == self.audio_widget1:
-                    audio_widget.play_audio(
-                        self.our_signal.data, self.our_signal.sr)
-
-                # play audio after modifications
-                else:
-                    audio_widget.play_audio(
-                        self.our_signal.data_after, self.our_signal.sr)
-
-                play_button.setText("Pause Audio")
-                self.set_icon(play_button, icon_path)
-            else:
-                sd.stop()
-                play_button.setText("Play Audio")
-                self.set_icon(play_button, "icons/play-square-svgrepo-com.png")
-
-    # searching , dont forget it
-
-    def find_closest_index(self, array, target):
-        """Find the index of the closest value in the array to the target."""
-        index = bisect.bisect_left(array, target)
-        if index == 0:
-            return 0
-        if index == len(array):
-            return len(array) - 1
-        before = array[index - 1]
-        after = array[index]
-        if after - target < target - before:
-            return index
-        else:
-            return index - 1
-
-    def split_data(self):
-        # round the frequencies
-
-        if self.activation == 'uniform':
-            num_slices = 10
-            excess_elements = len(self.our_signal.fft_data[0]) % num_slices
-            slice_size = int(len(self.our_signal.fft_data[0])/num_slices)
-            self.our_signal.slice_indices = [
-                (i * slice_size, (i + 1) * slice_size) for i in range(num_slices)]
-            # throwing off the rest of elements in the last slice.
-            start, end = self.our_signal.slice_indices[-1]
-            last_slice = (start, end+excess_elements)
-            self.our_signal.slice_indices[-1] = last_slice
-
-        elif self.activation == 'music':
-            # bass , guitar, drum and violin
-            ranges = [(0, 150), (150, 400), (400, 900), (900, 2000)]
-
-            # Assuming self.our_signal.fft_data[0] contains the frequency values
-            frequencies = self.our_signal.fft_data[0]
-            for start, end in ranges:
-                start_index = self.find_closest_index(frequencies, start)
-                end_index = self.find_closest_index(frequencies, end)
-                self.our_signal.slice_indices.append((start_index, end_index))
-
-        elif self.activation == 'animal':
-            # dogs, wolf, crow and bat
-            ranges = [(0, 450), (450, 1100), (1100, 3000), (3000, 9000)]
-
-            # Assuming self.our_signal.fft_data[0] contains the frequency values
-            frequencies = self.our_signal.fft_data[0]
-            for start, end in ranges:
-                start_index = self.find_closest_index(frequencies, start)
-                end_index = self.find_closest_index(frequencies, end)
-                self.our_signal.slice_indices.append((start_index, end_index))
-
-        elif self.activation == 'ecg':
-            ranges = [(0, 35), (48, 52), (55, 94), (95, 155)]
-
-            # Assuming self.our_signal.fft_data[0] contains the frequency values
-            frequencies = self.our_signal.fft_data[0]
-            for start, end in ranges:
-                start_index = self.find_closest_index(frequencies, start)
-                end_index = self.find_closest_index(frequencies, end)
-                self.our_signal.slice_indices.append((start_index, end_index))
-
-    def add_sliders(self, num_sliders):
-        layout = self.ui.slidersWidget.layout()
-        if layout:
-            for i in reversed(range(layout.count())):
-                layout.itemAt(i).widget().setParent(None)
-        for i in range(num_sliders):
-            slider = QSlider(Qt.Orientation.Vertical)
-            slider.setValue(100)
-            slider.setSingleStep(1)
-            slider.setRange(1, 200)
-            layout.addWidget(slider)
-
-    def handle_combobox_selection(self):
-        current_index = self.ui.modeList.currentIndex()
-        num_sliders = 10 if current_index == 0 else 4
-        self.add_sliders(num_sliders)
-        sliders = self.ui.slidersWidget.findChildren(QSlider)
-        for slider in sliders:
-            slider.valueChanged.connect(
-                lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
-
-    def editing(self, slider_value, slidernum):
-        self.pause_flag = True
-        start, end = self.our_signal.slice_indices[slidernum]
-        mag_fft = np.array(self.our_signal.fft_data[1][start:end])
-        freq_values = np.array(self.our_signal.fft_data[0][start:end])
-        self.current_slider = slidernum
-        factor_of_multiplication = slider_value / \
-            self.our_signal.each_slider_reference[slidernum]
-        smooth_data = (factor_of_multiplication) * np.array(
-            self.our_signal.smooth_seg[slidernum] / self.our_signal.smooth_seg_amp[slidernum])
-        result = mag_fft * smooth_data
-        self.our_signal.smooth_seg[slidernum] = smooth_data
-        self.our_signal.fft_data[1][start:end] = result
-        self.our_signal.smooth_seg_amp[slidernum] = factor_of_multiplication
-        self.our_signal.each_slider_reference[slidernum] = slider_value
-
-        self.our_signal.data_after = self.get_inverse_fft_values()
-
-        self.spectrogram_widget2.plot_spectrogram(
-            self.our_signal.data_after, self.our_signal.sr)
-        self.plot_signal()
-
+            self.end_ind = 50
+            self.open_file(self.file_path,self.file_name)
 
 def main():
     app = QtWidgets.QApplication([])
