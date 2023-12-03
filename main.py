@@ -35,10 +35,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.init_ui()
-        self.file_path= None
-        self.file_filter = None
-        self.file_name = None
-        self.selected_function = "Rectangle"  # window function
+        self.selected_function = None  # window function
         self.our_signal = None  # The current signal
         self.activation = 'uniform'  # the mode of operation (default)
         self.current_slider = None
@@ -89,7 +86,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.new_window.closeEvent = self.on_close_event
 
             # spine box of the standard deviation of the gaussian window function
-            self.new_window.stdSpinBox.setValue(5)
+            self.new_window.stdSpinBox.setValue(50)
             self.new_window.stdSpinBox.setRange(0, 1000)
             self.handle_selected_function()  # ??
 
@@ -109,12 +106,16 @@ class MainWindow(QtWidgets.QMainWindow):
         mode = self.ui.modeList.currentIndex()
         if mode == 0:
             self.activation = 'uniform'
+            self.our_signal.each_slider_reference = np.repeat(100, 10)
         elif mode == 1:
             self.activation = 'music'
+            self.our_signal.each_slider_reference = np.repeat(100, 4)
         elif mode == 2:
             self.activation = 'animal'
+            self.our_signal.each_slider_reference = np.repeat(100, 4)
         else:
             self.activation = 'ecg'
+            self.our_signal.each_slider_reference = np.repeat(100, 4)
 
     def handle_selected_function(self):
         # why ?? (what about smoothing_window_name in the signal class)
@@ -130,9 +131,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.new_window.stdSpinBox.hide()
             self.new_window.std.hide()
 
-
         self.smoothing_real_time()
-        
+
     def smoothing_real_time(self):
         _, last_item = self.our_signal.slice_indices[-1]
         self.new_window.smoothingGraph1.clear()
@@ -158,8 +158,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.new_window.smoothingGraph1.plot(
                 self.our_signal.fft_data[0][start:end],
                 current_segment_smooth_window, pen={'color': 'b', 'width': 2})
-    
-    
+
     def segment(self, start, end, sparse=False):
         if sparse:
             start_freq = self.our_signal.fft_data[0][start]
@@ -168,7 +167,6 @@ class MainWindow(QtWidgets.QMainWindow):
         end_freq = self.our_signal.fft_data[0][end]
         v_line = pg.InfiniteLine(pos=end_freq, angle=90, movable=False)
         self.new_window.smoothingGraph1.addItem(v_line)
-
 
     def fill_smooth_segments(self, i):
         start, end = self.our_signal.slice_indices[i]
@@ -203,12 +201,9 @@ class MainWindow(QtWidgets.QMainWindow):
             smooth_data = self.gaussian_window(samples, amplitude, std)
         return smooth_data
 
-
-
     def save(self):
         self.our_signal.smoothing_window_name = self.selected_function
         self.ui.slidersWidget.setEnabled(True)
-
 
         self.onNewWindowClosed()
 
@@ -318,11 +313,14 @@ class MainWindow(QtWidgets.QMainWindow):
             # Adjust the layout to make space for the spectrogram graphs
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram1)
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram2)
-            
-            
+
     """REINTALIZE PLOTTING ATTRIBUTES EVERYTIME WE OPEN NEW FILE"""
+
     def initialize_sig_attr(self):
-        self.speed = 200
+        if self.activation == "ecg":
+            self.speedSlider.setValue(5)
+        else:
+            self.speedSlider.setValue(200)
         self.end_ind = 50
         self.timer = QTimer()
         self.timer.setInterval(50)
@@ -358,10 +356,9 @@ class MainWindow(QtWidgets.QMainWindow):
             data = np.array(data_reader.iloc[:, 1].astype(float).tolist())
             sample_rate = 1 / np.mean(np.diff(time))
             self.speed = 3
-            
-        #plotting attributes 
-        self.initialize_sig_attr()
-        
+
+        # plotting attributes
+        self.selected_function = "Rectangle"
         self.our_signal = Signal(file_name[:-4])
         self.our_signal.data = data
         self.our_signal.time = time
@@ -370,29 +367,28 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal.smoothing_window_name = self.selected_function
         self.our_signal.data_x = []
         self.our_signal.data_y = []
-        print(f"sampling freq: {self.our_signal.sr}")
         x, y = self.get_fft_values(sample_interval, len(self.our_signal.data))
         self.our_signal.fft_data = [x, y]
-        print(f'max frequency {(self.our_signal.fft_data[0][-1])}')
         self.our_signal.data_after = data
 
         self.process_signal()
-        
+
     def process_signal(self):
         self.ui.slidersWidget.setEnabled(False)
         self.handle_selected_mode()
+        self.initialize_sig_attr()
         self.reset_sliders()
         self.split_data()
         self.plot_signal()
         self.plot_spectrogram()
-                
+
     def reset_sliders(self):
         sliders = self.ui.slidersWidget.findChildren(QSlider)
-        for i,slider in enumerate(sliders):
+        for i, slider in enumerate(sliders):
             slider.setValue(self.our_signal.each_slider_reference[i])
-            
-        
+
         """SPLIT DATA"""
+
     def find_closest_index(self, array, target):
         """Find the index of the closest value in the array to the target."""
         index = bisect.bisect_left(array, target)
@@ -406,9 +402,9 @@ class MainWindow(QtWidgets.QMainWindow):
             return index
         else:
             return index - 1
-        
+
     def split_data(self):
-            # round the frequencies
+        # round the frequencies
 
         if self.activation == 'uniform':
             num_slices = 10
@@ -473,6 +469,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return reconstructed_signal
 
     """DATA PLOTTING"""
+
     def plot_signal(self):
         if self.our_signal:
             self.ui.graph1.clear()
@@ -495,8 +492,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
             # data after modifications in graph 2
             data_y_after = self.our_signal.data_after[:self.end_ind]
-            self.plot_item_after = self.ui.graph2.plot(
-                data_x, data_y_after, name=self.our_signal.name, pen=(64, 92, 245))
+            if len(data_x) == len(data_y_after):
+                self.plot_item_after = self.ui.graph2.plot(
+                    data_x, data_y_after, name=self.our_signal.name, pen=(64, 92, 245))
+            else:
+                excess = len(data_x) - len(data_y_after)
+                self.plot_item_after = self.ui.graph2.plot(
+                    data_x[:-excess], data_y_after, name=self.our_signal.name, pen=(64, 92, 245))
 
             # Check if there is already a legend and remove it
             if self.ui.graph2.plotItem.legend is not None:
@@ -567,7 +569,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.set_icon(play_button, "icons/play-square-svgrepo-com.png")
 
     """HANDLE MODES SLIDERS """
-    
+
     def add_sliders(self, num_sliders):
         layout = self.ui.slidersWidget.layout()
         if layout:
@@ -587,36 +589,35 @@ class MainWindow(QtWidgets.QMainWindow):
         sliders = self.ui.slidersWidget.findChildren(QSlider)
         for slider in sliders:
             slider.valueChanged.connect(
-                    lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
-
-        
+                lambda slider_value=(slider.value()), slidernum=sliders.index(slider): self.editing(slider_value, slidernum))
 
     def editing(self, slider_value, slidernum):
-        if self.our_signal.smooth_seg:
-            self.ui.slidersWidget.setEnabled(True)
-            self.pause_flag = True
-            start, end = self.our_signal.slice_indices[slidernum]
-            mag_fft = np.array(self.our_signal.fft_data[1][start:end])
-            freq_values = np.array(self.our_signal.fft_data[0][start:end])
-            self.current_slider = slidernum
-            factor_of_multiplication = slider_value / \
-                self.our_signal.each_slider_reference[slidernum]
-            smooth_data = (factor_of_multiplication) * np.array(
-                self.our_signal.smooth_seg[slidernum] / self.our_signal.smooth_seg_amp[slidernum])
-            result = mag_fft * smooth_data
-            self.our_signal.smooth_seg[slidernum] = smooth_data
-            self.our_signal.fft_data[1][start:end] = result
-            self.our_signal.smooth_seg_amp[slidernum] = factor_of_multiplication
-            self.our_signal.each_slider_reference[slidernum] = slider_value
+        if self.our_signal != None:
+            if self.our_signal.smooth_seg:
+                self.ui.slidersWidget.setEnabled(True)
+                self.pause_flag = True
+                start, end = self.our_signal.slice_indices[slidernum]
+                mag_fft = np.array(self.our_signal.fft_data[1][start:end])
+                freq_values = np.array(self.our_signal.fft_data[0][start:end])
+                self.current_slider = slidernum
+                factor_of_multiplication = slider_value / \
+                    self.our_signal.each_slider_reference[slidernum]
+                smooth_data = (factor_of_multiplication) * np.array(
+                    self.our_signal.smooth_seg[slidernum] / self.our_signal.smooth_seg_amp[slidernum])
+                result = mag_fft * smooth_data
+                self.our_signal.smooth_seg[slidernum] = smooth_data
+                self.our_signal.fft_data[1][start:end] = result
+                self.our_signal.smooth_seg_amp[slidernum] = factor_of_multiplication
+                self.our_signal.each_slider_reference[slidernum] = slider_value
 
-            self.our_signal.data_after = self.get_inverse_fft_values()
+                self.our_signal.data_after = self.get_inverse_fft_values()
 
-            self.spectrogram_widget2.plot_spectrogram(
-                self.our_signal.data_after, self.our_signal.sr)
-            self.plot_signal()
+                self.spectrogram_widget2.plot_spectrogram(
+                    self.our_signal.data_after, self.our_signal.sr)
+                self.plot_signal()
 
-        """GRAPH CONTROLS"""    
-        
+        """GRAPH CONTROLS"""
+
     def play_pause(self):
         if self.our_signal:
             if self.timer.isActive():
@@ -638,15 +639,26 @@ class MainWindow(QtWidgets.QMainWindow):
     def zoom_out(self):
         view_box1 = self.graph1.plotItem.getViewBox()
         view_box1.scaleBy((1.5, 1))
-        view_box2 = self.graph1.plotItem.getViewBox()
+        view_box2 = self.graph2.plotItem.getViewBox()
         view_box2.scaleBy((1.5, 1))
 
     def change_speed(self):
         if self.our_signal:
             self.speed = self.speedSlider.value()
-    
+
     def reset_data(self):
-        pass
+        # counteract the effect of the smoothing window
+        self.our_signal.data_after = self.our_signal.data
+        self.our_signal.fft_data = self.get_fft_values(
+            1/self.our_signal.sr, len(self.our_signal.data))
+
+        for i, segment in enumerate(self.our_signal.smooth_seg):
+            start, end = self.our_signal.slice_indices[i]
+            normalized_window = segment / (self.our_signal.smooth_seg_amp[i])
+            self.our_signal.smooth_seg_amp[i] = max(
+                self.our_signal.fft_data[1][start:end])
+            self.our_signal.smooth_seg[i] = normalized_window * \
+                self.our_signal.smooth_seg_amp[i]
 
     def reset(self):
         if self.our_signal:
@@ -665,11 +677,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.spectrogram_widget1.clear()
             self.spectrogram_widget2.clear()
             self.timer.stop()
-            
             self.reset_data()
-            self.reset_sliders()
             self.initialize_sig_attr()
-            self.open_file(self.file_path,self.file_name)
+            self.process_signal()
+            self.reset_sliders()
+            self.timer.start()
+
 
 def main():
     app = QtWidgets.QApplication([])
