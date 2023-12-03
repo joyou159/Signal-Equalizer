@@ -644,6 +644,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def change_speed(self):
         if self.our_signal:
             self.speed = self.speedSlider.value()
+    
+    def reset_data(self):
+        pass
 
     def reset(self):
         if self.our_signal:
@@ -663,6 +666,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.spectrogram_widget2.clear()
             self.timer.stop()
             
+            self.reset_data()
+            self.reset_sliders()
             self.initialize_sig_attr()
             self.open_file(self.file_path,self.file_name)
 
