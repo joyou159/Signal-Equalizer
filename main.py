@@ -54,11 +54,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ecg_flag = False
         self.pause_flag = False
         self.excess = None
-        self.ranges = [[],
-                    [(0, 500), (500, 2000), (2000, 4000), (4000, 20000)],
-                    [(0, 450), (450, 1100), (1100, 3000), (3000, 9000)],
-                    [(0, 35), (48, 52), (55, 94), (95, 155)]
-                ]
+        self.ranges = [list(np.repeat(100, 10)),
+                       [(0, 500), (500, 2000), (2000, 4000), (4000, 20000)],
+                       [(0, 450), (450, 1100), (1100, 3000), (3000, 9000)],
+                       #    [(0, 35), (48, 52), (55, 94), (95, 155)]
+                       [(48, 52), (52, 75), (75, 95), (95, 250)]
+                       ]
+        self.sparse_state = [False, True, True, True]
 
 ####################################### Helper Functions ########################################
     def show_error_message(self, message):
@@ -77,7 +79,6 @@ class MainWindow(QtWidgets.QMainWindow):
         msg_box.setText(message)
         msg_box.exec()
 
-
     def set_icon(self, widget_name, icon_path):
         """
         Set the icon for a widget.
@@ -93,9 +94,9 @@ class MainWindow(QtWidgets.QMainWindow):
         icon = QIcon(icon_path)
         # Set the icon for the button
         widget_name.setIcon(icon)
-        
-####################################### Smoothing Window ########################################       
-    def rectangle_window(self, amplitude, N):
+
+####################################### Smoothing Window ########################################
+    def rectangle_window(self, N, amplitude, std=0):
         """
         Generates a rectangular window function.
 
@@ -108,7 +109,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         return amplitude * signal.windows.boxcar(N)
 
-    def hamming_window(self, N, amplitude):
+    def hamming_window(self, N, amplitude, std=0):
         """
         Generate a Hamming window of length N.
 
@@ -121,7 +122,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         return amplitude * signal.windows.hamming(N)
 
-    def hanning_window(self, N, amplitude):
+    def hanning_window(self, N, amplitude, std=0):
         """
         Generate a Hanning window of length N.
 
@@ -145,9 +146,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         Returns:
             numpy.ndarray: The generated Gaussian window.
-        """
-        return amplitude * signal.windows.gaussian(N, std)
 
+        """
+        std = int(self.new_window.stdSpinBox.text())
+        return amplitude * signal.windows.gaussian(N, std)
 
     def openNewWindow(self):
 
@@ -191,18 +193,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def handle_selected_mode(self):
         mode = self.ui.modeList.currentIndex()
-        if mode == 0:
-            self.activation = 'uniform'
-            self.our_signal.each_slider_reference = np.repeat(100, 10)
-        elif mode == 1:
-            self.activation = 'music'
-            self.our_signal.each_slider_reference = np.repeat(100, 4)
-        elif mode == 2:
-            self.activation = 'animal'
-            self.our_signal.each_slider_reference = np.repeat(100, 4)
-        else:
-            self.activation = 'ecg'
-            self.our_signal.each_slider_reference = np.repeat(100, 4)
+        self.our_signal.each_slider_reference = np.repeat(
+            100, len(self.ranges[mode]))
 
     def handle_selected_function(self):
         # why ?? (what about smoothing_window_name in the signal class)
@@ -228,17 +220,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         for i in range(len(self.our_signal.slice_indices)):
             start, end = self.our_signal.slice_indices[i]
-            if self.activation == "uniform":
-                if i == len(self.our_signal.slice_indices) - 1:
-                    self.segment(start, end-1, sparse=False)
-                else:
-                    self.segment(start, end, sparse=False)
+            mode = self.ui.modeList.currentIndex()
+            if i == len(self.our_signal.slice_indices) - 1:
+                self.segment(
+                    start, end-1, sparse=self.sparse_state[mode])
             else:
-
-                if i == len(self.our_signal.slice_indices) - 1:
-                    self.segment(start, end-1, sparse=True)
-                else:
-                    self.segment(start, end, sparse=True)
+                self.segment(start, end, sparse=self.sparse_state[mode])
 
             current_segment_smooth_window = self.fill_smooth_segments(i)
 
@@ -273,19 +260,12 @@ class MainWindow(QtWidgets.QMainWindow):
         return current_segment_smooth_window
 
     def custom_window(self, samples, amplitude):
-        if self.selected_function == 'Rectangle':
-            smooth_data = self.rectangle_window(
-                amplitude, samples)
+        self.window_function = {'Rectangle': self.rectangle_window,
+                                'Hamming': self.hamming_window, 'Hanning': self.hanning_window, 'Gaussian': self.gaussian_window}
 
-        elif self.selected_function == 'Hamming':
-            smooth_data = self.hamming_window(samples, amplitude)
-
-        elif self.selected_function == 'Hanning':
-            smooth_data = self.hanning_window(samples, amplitude)
-
-        elif self.selected_function == 'Gaussian':
-            std = int(self.new_window.stdSpinBox.text())
-            smooth_data = self.gaussian_window(samples, amplitude, std)
+        std = 0
+        smooth_data = self.window_function[self.selected_function](
+            samples, amplitude, std)
         return smooth_data
 
     def save(self):
@@ -302,8 +282,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setEnabled(True)
 
 
+####################################### Main Window ########################################
 
-####################################### Main Window ######################################## 
+
     def init_ui(self):
         """
         Initializes the user interface.
@@ -346,19 +327,16 @@ class MainWindow(QtWidgets.QMainWindow):
             self.handle_combobox_selection)
         self.ui.spectogramCheck.stateChanged.connect(self.show_spectrogram)
 
-
-
     def setup_widget_layout(self, widget, layout_parent):
         """
         Set up the layout for a widget within a layout parent.
-        
+
         Args:
             widget: The widget to be added to the layout.
             layout_parent: The parent layout that the widget will be added to.
         """
         layout = QVBoxLayout(layout_parent)
         layout.addWidget(widget)
-
 
     def graph_load_ui(self):
         """
@@ -396,9 +374,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.graph2.setBackground("transparent")
 
         # Add items to the modeList widget
-        modes = ["Uniform Range", "Musical Instruments", "Animal Sounds", "ECG Abnormalities"]
+        modes = ["Uniform Range", "Musical Instruments",
+                 "Animal Sounds", "ECG Abnormalities"]
         self.ui.modeList.addItems(modes)
-
 
     def show_spectrogram(self, state):
         """
@@ -428,8 +406,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram1)
             self.ui.spectrogramLayout.addWidget(self.ui.spectogram2)
 
-
-
     def initialize_sig_attr(self):
         """
         Initializes the attributes of the class.
@@ -454,12 +430,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer.setInterval(50)
         self.timer.timeout.connect(self.updating_graphs)
 
-####################################### Data Processing ######################################## 
+####################################### Data Processing ########################################
 
     def browse(self):
         """
         Opens a file dialog to browse and select a signal file.
-        
+
         Returns:
             None
         """
@@ -470,7 +446,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.file_path:
             self.file_name = os.path.basename(self.file_path)
             self.open_file(self.file_path, self.file_name)
-
 
     def open_file(self, path: str, file_name: str):
         """
@@ -496,20 +471,20 @@ class MainWindow(QtWidgets.QMainWindow):
         elif filetype == "csv":
             self.ecg_flag = True
             # Read CSV file and extract time and data columns
-            data_reader = pd.read_csv(path, delimiter=',', skiprows=1)  # Skip header row
+            data_reader = pd.read_csv(
+                path, delimiter=',', skiprows=1)  # Skip header row
             time = np.array(data_reader.iloc[:, 0].astype(float).tolist())
             data = np.array(data_reader.iloc[:, 1].astype(float).tolist())
             sample_rate = 1 / np.mean(np.diff(time))
             self.speed = 3
-    
+
         # Process the data
         self.process_data(data, time, sample_rate, file_name)
 
-
-    def process_data(self, data: list[float], 
-                    time: float, 
-                    sample_rate: int, 
-                    file_name: str) -> None:
+    def process_data(self, data: list[float],
+                     time: float,
+                     sample_rate: int,
+                     file_name: str) -> None:
         """
         Process the data by setting the necessary attributes of the Signal class
         and calling the process_signal method.
@@ -523,41 +498,39 @@ class MainWindow(QtWidgets.QMainWindow):
         Returns:
             None
         """
-        
+
         # Set the selected function
         self.selected_function = "Rectangle"
-        
+
         # Create an instance of the Signal class
         self.our_signal = Signal(file_name[:-4])
-        
+
         # Set the attributes of the Signal class
         self.our_signal.data = data
         self.our_signal.time = time
         self.our_signal.sr = sample_rate
-        
+
         # Calculate the sample interval
         sample_interval = 1 / self.our_signal.sr
-        
+
         # Set the smoothing window name
         self.our_signal.smoothing_window_name = self.selected_function
-        
+
         # Initialize the data_x and data_y lists
         self.our_signal.data_x = []
         self.our_signal.data_y = []
-        
+
         # Get the FFT values
         x, y = self.get_fft_values(sample_interval, len(self.our_signal.data))
-        
+
         # Set the FFT data
         self.our_signal.fft_data = [x, y]
-        
+
         # Set the data_after attribute
         self.our_signal.data_after = data
 
         # Call the process_signal method
         self.process_signal()
-
-
 
     def process_signal(self):
         """
@@ -577,9 +550,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plot_signal()
         self.plot_spectrogram()
 
-####################################### Plot Data and Controllers ######################################## 
+####################################### Plot Data and Controllers ########################################
     def plot_signal(self):
-        """
+        """ 
         Plot the signal on two graph objects.
         """
         if not self.our_signal:
@@ -590,21 +563,23 @@ class MainWindow(QtWidgets.QMainWindow):
 
         data_x = self.our_signal.time[:self.end_ind]
         data_y_before = self.our_signal.data[:self.end_ind]
-        self.plot_item_before = self.plot_on_graph(self.ui.graph1, data_x, data_y_before)
+        self.plot_item_before = self.plot_on_graph(
+            self.ui.graph1, data_x, data_y_before)
 
         data_y_after = self.our_signal.data_after[:self.end_ind]
         if len(data_x) == len(data_y_after):
-            self.plot_item_after = self.plot_on_graph(self.ui.graph2, data_x, data_y_after)
+            self.plot_item_after = self.plot_on_graph(
+                self.ui.graph2, data_x, data_y_after)
         else:
             excess = len(data_x) - len(data_y_after)
-            self.plot_item_after = self.plot_on_graph(self.ui.graph2, data_x[:-excess], data_y_after)
+            self.plot_item_after = self.plot_on_graph(
+                self.ui.graph2, data_x[:-excess], data_y_after)
 
         self.set_icon(self.ui.playPause, "icons/pause-square.png")
         self.ui.playPause.setText("Pause")
 
         if not self.pause_flag and not self.timer.isActive():
             self.timer.start(50)
-
 
     def plot_on_graph(self, graph, data_x, data_y):
         """
@@ -618,7 +593,8 @@ class MainWindow(QtWidgets.QMainWindow):
         Returns:
             PlotItem: The item representing the plotted data on the graph.
         """
-        plot_item = graph.plot(data_x, data_y, name=self.our_signal.name, pen=(64, 92, 245))
+        plot_item = graph.plot(
+            data_x, data_y, name=self.our_signal.name, pen=(64, 92, 245))
 
         # Check if there is already a legend and remove it
         if graph.plotItem.legend is not None:
@@ -671,8 +647,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plot_item_after.setData(data_X, data_Y_after, visible=True)
         else:
             self.excess = len(data_X) - len(data_Y_after)
-            self.plot_item_after.setData(data_X[:-self.excess], data_Y_after, visible=True)
-
+            self.plot_item_after.setData(
+                data_X[:-self.excess], data_Y_after, visible=True)
 
     def plot_spectrogram(self):
         """
@@ -693,7 +669,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.spectrogram_widget2.plot_spectrogram(
                 self.our_signal.data_after, self.our_signal.sr)
-
 
     def toggle_audio(self, audio_widget, play_button, icon_path):
         """
@@ -726,7 +701,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 play_button.setText("Play Audio")
                 self.set_icon(play_button, "icons/play-square-svgrepo-com.png")
 
-                
     def play_pause(self):
         """
         Toggles the play/pause functionality of the timer.
@@ -738,7 +712,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.our_signal:
             if self.timer.isActive():
                 self.timer.stop()
-                self.set_icon(self.ui.playPause, "icons/play-square-svgrepo-com.png")
+                self.set_icon(self.ui.playPause,
+                              "icons/play-square-svgrepo-com.png")
                 self.ui.playPause.setText("Play")
             else:
                 self.set_icon(self.ui.playPause, "icons/pause-square.png")
@@ -752,7 +727,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Get the view box of graph1 and scale it by (0.5, 1)
         view_box1 = self.graph1.plotItem.getViewBox()
         view_box1.scaleBy((0.5, 1))
-        
+
         # Get the view box of graph2 and scale it by (0.5, 1)
         view_box2 = self.graph2.plotItem.getViewBox()
         view_box2.scaleBy((0.5, 1))
@@ -771,7 +746,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # Get the view box of graph2 and scale it horizontally by a factor of 1.5
         view_box2 = self.graph2.plotItem.getViewBox()
         view_box2.scaleBy((1.5, 1))
-
 
     def change_speed(self):
         """
@@ -803,7 +777,6 @@ class MainWindow(QtWidgets.QMainWindow):
             # Apply the normalized window to the segment
             self.our_signal.smooth_seg[i] = normalized_window * \
                 self.our_signal.smooth_seg_amp[i]
-
 
     def reset(self):
         """
@@ -846,7 +819,7 @@ class MainWindow(QtWidgets.QMainWindow):
 #     for i, slider in enumerate(sliders):
 #         slider.setValue(self.our_signal.each_slider_reference[i])
 
-####################################### Splitting Data ######################################## 
+####################################### Splitting Data ########################################
 
     def find_closest_index(self, array, target):
         """
@@ -906,16 +879,15 @@ class MainWindow(QtWidgets.QMainWindow):
             slice_size = len(frequencies) // num_slices
             self.our_signal.slice_indices = [
                 (i * slice_size, (i + 1) * slice_size) for i in range(num_slices)]
-            
+
             # Adjust the last slice to include excess elements
             start, end = self.our_signal.slice_indices[-1]
             last_slice = (start, end + excess_elements)
             self.our_signal.slice_indices[-1] = last_slice
-            
+
         else:
             # Calculate the slice indices based on the mode selection
             self.calc_boundaries_indices(frequencies, mode_selection)
-
 
     def calc_boundaries_indices(self, data, mode):
         """
@@ -968,7 +940,6 @@ class MainWindow(QtWidgets.QMainWindow):
         fft_values = (2/N) * np.abs(fft_values[:N//2])
 
         return f_values, fft_values
-        
 
     def get_inverse_fft_values(self):
         """
@@ -977,16 +948,15 @@ class MainWindow(QtWidgets.QMainWindow):
         Returns:
             reconstructed_signal (numpy.ndarray): The reconstructed signal.
         """
-        # Calculate modified FFT values by multiplying the second element of fft_data by (len(data)/2) and 
+        # Calculate modified FFT values by multiplying the second element of fft_data by (len(data)/2) and
         # exponentiating it by the phase of the signal
         modified_fft_values = np.array(self.our_signal.fft_data[1]) * (len(self.our_signal.data)/2) * \
             np.exp(1j * self.our_signal.phase)
 
         # Apply inverse FFT to the modified FFT values to reconstruct the signal
         reconstructed_signal = np.fft.irfft(modified_fft_values)
-        
-        return reconstructed_signal
 
+        return reconstructed_signal
 
     def editing(self, slider_value, slidernum):
         """
@@ -1019,7 +989,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.current_slider = slidernum
 
                 # Calculate the factor of multiplication
-                factor_of_multiplication = slider_value / self.our_signal.each_slider_reference[slidernum]
+                factor_of_multiplication = slider_value / \
+                    self.our_signal.each_slider_reference[slidernum]
 
                 # Calculate the smooth data
                 smooth_data = (factor_of_multiplication) * np.array(
@@ -1038,12 +1009,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.our_signal.data_after = self.get_inverse_fft_values()
 
                 # Plot the spectrogram
-                self.spectrogram_widget2.plot_spectrogram(self.our_signal.data_after, self.our_signal.sr)
+                self.spectrogram_widget2.plot_spectrogram(
+                    self.our_signal.data_after, self.our_signal.sr)
 
                 # Plot the signal
                 self.plot_signal()
-
-       
 
     def add_sliders(self, num_sliders):
         """
@@ -1068,23 +1038,22 @@ class MainWindow(QtWidgets.QMainWindow):
             slider.setRange(1, 200)
             layout.addWidget(slider)
 
-
     def handle_combobox_selection(self):
         """
         Handle the selection of an item in the combobox.
         """
         # Get the current index of the combobox
         current_index = self.ui.modeList.currentIndex()
-        
+
         # Determine the number of sliders based on the current index
         num_sliders = 10 if current_index == 0 else 4
-        
+
         # Add the specified number of sliders
         self.add_sliders(num_sliders)
-        
+
         # Find all the sliders in the slidersWidget
         sliders = self.ui.slidersWidget.findChildren(QSlider)
-        
+
         # Connect the valueChanged signal of each slider to the editing method
         for slider in sliders:
             slider.valueChanged.connect(
