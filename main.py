@@ -55,9 +55,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pause_flag = False
         self.excess = None
         self.ranges = [list(np.repeat(100, 10)),
-                       [(0, 500), (500, 2000), (2000, 4000), (4000, 20000)],
+                       [(40, 400), (400, 800), (800, 4000), (5000, 14000)],
                        [(0, 450), (450, 1100), (1100, 3000), (3000, 9000)],
-                       #    [(0, 35), (48, 52), (55, 94), (95, 155)]
                        [(48, 52), (52, 75), (75, 95), (95, 250)]
                        ]
         self.sparse_state = [False, True, True, True]
