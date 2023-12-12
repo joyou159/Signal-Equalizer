@@ -55,9 +55,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pause_flag = False
         self.excess = None
         self.ranges = [list(np.repeat(100, 10)),
+                       # [(20, 70), (60, 80), (270, 400),(200, 290)] for another file music2
+                       # Guitar  ,  Flute  ,  Harmonica  ,   Xylophone
                        [(40, 400), (400, 800), (800, 4000), (5000, 14000)],
+                       # Dogs   ,    Wolves    ,   Crow    ,     Bat
                        [(0, 450), (450, 1100), (1100, 3000), (3000, 9000)],
-                       [(48, 52), (52, 75), (75, 95), (95, 250)]
+                       # () , (Ventricular tachycardia AND Ventricular couplets) , Ventricular couplets (only),
+                       [(0, 2), (2, 8), (8, 15), (15, 20)]
                        ]
         self.sparse_state = [False, True, True, True]
 
@@ -282,7 +286,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 ####################################### Main Window ########################################
-
 
     def init_ui(self):
         """
@@ -544,7 +547,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.slidersWidget.setEnabled(False)
         self.handle_selected_mode()
         self.initialize_sig_attr()
-        # self.reset_sliders()
+        self.reset_sliders()
         self.split_data()
         self.plot_signal()
         self.plot_spectrogram()
@@ -758,24 +761,26 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         Reset the data in the signal object.
         """
-        # Counteract the effect of the smoothing window
-        self.our_signal.data_after = self.our_signal.data
-        self.our_signal.fft_data = self.get_fft_values(
-            1/self.our_signal.sr, len(self.our_signal.data))
+        if self.our_signal:
+            # Counteract the effect of the smoothing window
+            self.our_signal.data_after = self.our_signal.data
+            self.our_signal.fft_data = self.get_fft_values(
+                1/self.our_signal.sr, len(self.our_signal.data))
 
-        for i, segment in enumerate(self.our_signal.smooth_seg):
-            start, end = self.our_signal.slice_indices[i]
+            for i, segment in enumerate(self.our_signal.smooth_seg):
+                start, end = self.our_signal.slice_indices[i]
 
-            # Normalize the windowed segment
-            normalized_window = segment / (self.our_signal.smooth_seg_amp[i])
+                # Normalize the windowed segment
+                normalized_window = segment / \
+                    (self.our_signal.smooth_seg_amp[i])
 
-            # Update the amplitude of the smoothing segment
-            self.our_signal.smooth_seg_amp[i] = max(
-                self.our_signal.fft_data[1][start:end])
+                # Update the amplitude of the smoothing segment
+                self.our_signal.smooth_seg_amp[i] = max(
+                    self.our_signal.fft_data[1][start:end])
 
-            # Apply the normalized window to the segment
-            self.our_signal.smooth_seg[i] = normalized_window * \
-                self.our_signal.smooth_seg_amp[i]
+                # Apply the normalized window to the segment
+                self.our_signal.smooth_seg[i] = normalized_window * \
+                    self.our_signal.smooth_seg_amp[i]
 
     def reset(self):
         """
@@ -813,10 +818,11 @@ class MainWindow(QtWidgets.QMainWindow):
             # Start the timer
             self.timer.start()
 
-# def reset_sliders(self):
-#     sliders = self.ui.slidersWidget.findChildren(QSlider)
-#     for i, slider in enumerate(sliders):
-#         slider.setValue(self.our_signal.each_slider_reference[i])
+    def reset_sliders(self):
+        if self.our_signal:
+            sliders = self.ui.slidersWidget.findChildren(QSlider)
+            for i, slider in enumerate(sliders):
+                slider.setValue(self.our_signal.each_slider_reference[i])
 
 ####################################### Splitting Data ########################################
 
@@ -967,8 +973,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         Returns:
             None
-        """
-
+        """ 
+        print(slidernum)
         # Check if our_signal exists
         if self.our_signal is not None:
             # Check if smooth_seg is True
