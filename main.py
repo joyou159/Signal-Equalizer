@@ -60,12 +60,12 @@ class MainWindow(QtWidgets.QMainWindow):
                        [(40, 400), (400, 800), (800, 4000), (5000, 14000)],
                        # Dogs   ,    Wolves    ,   Crow    ,     Bat
                        [(0, 450), (450, 1100), (1100, 3000), (3000, 9000)],
-                       # () , (Ventricular tachycardia AND Ventricular couplets) , Ventricular couplets (only),
-                       [(0, 2), (2, 8), (8, 15), (15, 20)]
+                       # (ِ[/]) , (Ventricular tachycardia AND Ventricular couplets) , Ventricular couplets (only),
+                       [(0, 2), (2, 5), (5, 8), (8, 15)]
                        ]
         self.sparse_state = [False, True, True, True]
 
-####################################### Helper Functions ########################################
+####################################### Helper Functions ################################## ######
     def show_error_message(self, message):
         """
         Displays an error message to the user.
@@ -253,13 +253,12 @@ class MainWindow(QtWidgets.QMainWindow):
             current_segment_smooth_window = self.custom_window(
                 len(self.our_signal.fft_data[0][start:end]), amp)
             self.our_signal.smooth_seg.append(current_segment_smooth_window)
-            print("initialize")
 
         else:
             amp = max(self.our_signal.fft_data[1][start:end])
             current_segment_smooth_window = self.custom_window(
                 len(self.our_signal.fft_data[0][start:end]), amp)
-            print("update")
+
         return current_segment_smooth_window
 
     def custom_window(self, samples, amplitude):
@@ -441,6 +440,14 @@ class MainWindow(QtWidgets.QMainWindow):
         Returns:
             None
         """
+        self.selected_function = None  # Window function
+        self.activation = 'uniform'  # The mode of operation (default)
+        self.current_slider = None
+        self.ecg_flag = False
+        self.pause_flag = False
+        self.excess = None
+        self.sparse_state = [False, True, True, True]
+
         self.file_filter = "Raw Data (*.csv *.wav *.mp3)"
         self.file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
             None, 'Open Signal File', './', filter=self.file_filter)
@@ -973,8 +980,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         Returns:
             None
-        """ 
-        print(slidernum)
+        """
+
         # Check if our_signal exists
         if self.our_signal is not None:
             # Check if smooth_seg is True
