@@ -1,5 +1,5 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtWidgets import QVBoxLayout,  QMessageBox,  QSlider
+from PyQt6.QtWidgets import QVBoxLayout,  QMessageBox,  QSlider, QLabel
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6 import QtWidgets, uic
@@ -51,17 +51,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.our_signal = None  # The current signal
         self.activation = 'uniform'  # The mode of operation (default)
         self.current_slider = None
-        self.ecg_flag = False
         self.pause_flag = False
         self.excess = None
         self.ranges = [list(np.repeat(100, 10)),
-                       # [(20, 70), (60, 80), (270, 400),(200, 290)] for another file music2
+                       #    [(20, 70), (60, 80), (270, 400),(200, 290)] for another file music2
                        # Guitar  ,  Flute  ,  Harmonica  ,   Xylophone
-                       [(40, 400), (400, 800), (800, 4000), (5000, 14000)],
+                       [(0, 170), (170, 250), (250, 400), (400, 1000)],
                        # Dogs   ,    Wolves    ,   Crow    ,     Bat
                        [(0, 450), (450, 1100), (1100, 3000), (3000, 9000)],
                        # (ِ[/]) , (Ventricular tachycardia AND Ventricular couplets) , Ventricular couplets (only),
-                       [(0, 2), (2, 5), (5, 8), (8, 15)]
+                       [(0, 6.5), (0, 5), (0, 8)]
                        ]
         self.sparse_state = [False, True, True, True]
 
@@ -286,6 +285,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 ####################################### Main Window ########################################
 
+
     def init_ui(self):
         """
         Initializes the user interface.
@@ -296,8 +296,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.graph_load_ui()
 
         # Other Attributes
-        self.speed = 200
         self.end_ind = 50
+        self.ecg_flag = False
         # self.timer = QTimer()
         # self.timer.setInterval(50)
         # self.timer.timeout.connect(self.updating_graphs)
@@ -312,11 +312,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.toggle_audio, self.audio_widget2, self.ui.playAudio2, "icons/pause-square.png"))
 
         # Set speed slider properties
-        self.speedSlider.setMinimum(0)
-        self.speedSlider.setMaximum(500)
-        self.speedSlider.setSingleStep(5)
-        self.speedSlider.setValue(self.speed)
-        self.speedSlider.valueChanged.connect(self.change_speed)
 
         self.ui.smoothingWindow.clicked.connect(self.openNewWindow)
         self.ui.browseFile.clicked.connect(self.browse)
@@ -420,12 +415,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         Returns:
             None
-        """
-        if self.activation == "ecg":
-            self.speedSlider.setValue(5)
+        # """
+        # if self.activation == "ecg":
+        #     self.speedSlider.setValue(5)
 
-        else:
-            self.speedSlider.setValue(200)
+        # else:
+        #     self.speedSlider.setValue(200)
         self.end_ind = 50
         self.timer = QTimer()
         self.timer.setInterval(50)
@@ -551,6 +546,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Returns:
             None
         """
+        self.initialize_speed()
         self.ui.slidersWidget.setEnabled(False)
         self.handle_selected_mode()
         self.initialize_sig_attr()
@@ -558,6 +554,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.split_data()
         self.plot_signal()
         self.plot_spectrogram()
+
+    def initialize_speed(self):
+        if self.ecg_flag:
+            self.speed = 8
+            self.speedSlider.setMinimum(0)
+            self.speedSlider.setMaximum(50)
+            self.speedSlider.setSingleStep(5)
+            self.speedSlider.setValue(self.speed)
+            print(self.speed)
+        else:
+            self.speed = 200
+            self.speedSlider.setMinimum(0)
+            self.speedSlider.setMaximum(500)
+            self.speedSlider.setSingleStep(5)
+            self.speedSlider.setValue(self.speed)
+        self.speedSlider.valueChanged.connect(self.change_speed)
 
 ####################################### Plot Data and Controllers ########################################
     def plot_signal(self):
@@ -817,10 +829,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.reset_data()
 
             # Initialize signal attributes
-            self.initialize_sig_attr()
+            # self.initialize_sig_attr()
 
             # Process the signal
-            self.process_signal()
+            self.handle_selected_mode()
+            self.initialize_sig_attr()
+            self.reset_sliders()
+            self.plot_signal()
+            self.plot_spectrogram()
 
             # Start the timer
             self.timer.start()
@@ -1034,6 +1050,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Args:
             num_sliders (int): The number of sliders to add.
         """
+        sliders_num = num_sliders
         # Get the layout of the sliders widget
         layout = self.ui.slidersWidget.layout()
 
@@ -1043,12 +1060,17 @@ class MainWindow(QtWidgets.QMainWindow):
                 layout.itemAt(i).widget().setParent(None)
 
         # Add the specified number of sliders to the layout
-        for i in range(num_sliders):
+        if self.ui.modeList.currentIndex() == 3:
+            sliders_num = 3
+        for i in range(sliders_num):
             slider = QSlider(Qt.Orientation.Vertical)
             slider.setValue(100)
             slider.setSingleStep(1)
             slider.setRange(1, 200)
             layout.addWidget(slider)
+            # if self.ui.modeList.currentIndex == 3:
+            #     label = QLabel(f"Label {i + 1}")
+            #     self.ui.widget.addWidget(label)
 
     def handle_combobox_selection(self):
         """
