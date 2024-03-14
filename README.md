@@ -1,4 +1,5 @@
 # Signal Equalizer Desktop Application
+![Demo of Task3](https://github.com/MohamedMandour10/Signal-Equalizer/assets/115044826/e64d456e-9e9b-4d03-9053-2e4930367ca5)
 
 ## Overview
 
